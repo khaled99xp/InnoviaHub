@@ -511,7 +511,7 @@ namespace backend.Services
                        
                        if (message.ToLower().Contains("skrivbord"))
                        {
-                           conversationHistory.Add(new { role = "system", content = "User is asking about Skrivbord. This is a NEW request. Start fresh conversation flow for Skrivbord booking. When user provides details, apply them to Skrivbord, NOT to previous Mötesrum booking." });
+                           conversationHistory.Add(new { role = "system", content = "User is asking about Skrivbord (Desk). This is a NEW request. Start fresh conversation flow for Skrivbord booking. Follow the SAME flow as other resources: 1) Ask for number of people ONCE, 2) Ask for date ONCE, 3) Ask for time slot ONCE, 4) Provide specific recommendations. NEVER give recommendations before asking for time. When user provides details, apply them to Skrivbord, NOT to previous Mötesrum booking." });
                        }
                        
                        // Add context for general questions
@@ -527,10 +527,10 @@ namespace backend.Services
                        conversationHistory.Add(new { role = "system", content = "RESOURCE CONTEXT: When user is booking a specific resource, maintain that context. If user says '3' after asking about AI Server, it means 3 people for AI Server. If user says '10 november' after asking about Skrivbord, it means 10 november for Skrivbord. Do NOT mix contexts between different resources." });
                        
                        // Add instruction to distinguish between resource types
-                       conversationHistory.Add(new { role = "system", content = "RESOURCE DISTINCTION: AI Server is a technical resource, not a meeting room. When user asks for AI Server, give AI Server recommendations, NOT meeting room recommendations. Mötesrum is for meetings, AI Server is for technical work. Do NOT confuse these resources." });
+                       conversationHistory.Add(new { role = "system", content = "RESOURCE DISTINCTION: AI Server is a technical resource, not a meeting room. When user asks for AI Server, give AI Server recommendations, NOT meeting room recommendations. Mötesrum is for meetings, AI Server is for technical work. Skrivbord (Desk) is for individual work, NOT for meetings. Do NOT confuse these resources." });
                        
                        // Add instruction for proper conversation flow
-                       conversationHistory.Add(new { role = "system", content = "CONVERSATION FLOW: 1) Ask for number of people, 2) Ask for date, 3) Ask for time, 4) Give recommendations. NEVER give recommendations before asking for time. NEVER ask for time after giving recommendations." });
+                       conversationHistory.Add(new { role = "system", content = "CONVERSATION FLOW: 1) Ask for number of people, 2) Ask for date, 3) Ask for time, 4) Give recommendations. NEVER give recommendations before asking for time. NEVER ask for time after giving recommendations. This applies to ALL resources: Mötesrum, Skrivbord, VR Headset, and AI Server." });
                        
                        // Add instruction to preserve exact user input
                        conversationHistory.Add(new { role = "system", content = "PRESERVE USER INPUT: When giving recommendations, use the EXACT number the user provided. If user said '11 personer', say 'För 11 personer'. If user said '7 personer', say 'För 7 personer'. NEVER change the number." });

@@ -214,14 +214,27 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
         setSessionId(response.sessionId);
       }
 
-      // Add AI response to chat
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        content: response.response,
-        isUser: false,
-        timestamp: new Date(response.timestamp),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
+      // Check if this is a booking recommendation response
+      const isBookingRecommendation =
+        response.response &&
+        (response.response.toLowerCase().includes("rekommenderar jag") ||
+          response.response.toLowerCase().includes("gå till bokningssidan") ||
+          response.response
+            .toLowerCase()
+            .includes("du kan gå till bokningssidan") ||
+          response.response.toLowerCase().includes("slutföra din bokning") ||
+          response.response.toLowerCase().includes("bokningssidan"));
+
+      // Only add AI response if it's NOT a booking recommendation
+      if (!isBookingRecommendation) {
+        const aiMessage = {
+          id: (Date.now() + 1).toString(),
+          content: response.response,
+          isUser: false,
+          timestamp: new Date(response.timestamp),
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+      }
 
       // Update suggestions if provided
       if (response.suggestions && response.suggestions.length > 0) {
@@ -297,7 +310,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
           resourceType = "vr";
         }
 
-        // Add booking helper message to chat
+        // Add combined booking helper message to chat
         const bookingHelperMessage = {
           id: (Date.now() + 2).toString(),
           content: `**Redo att boka!**
@@ -360,24 +373,39 @@ Verifierar tillgänglighet...`,
             );
             const available = checks.filter((x) => x.ok).map((x) => x.r);
 
-            const content =
-              available.length > 0
-                ? `**Tillgängliga resurser (verifierat):**\n${available
-                    .map((r) => `- ${r.name}`)
-                    .join(
-                      "\n"
-                    )}\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?`
-                : `**Tillgängliga resurser (verifierat):**\nInga resurser är tillgängliga för valt datum/tid.\n\nFöreslår: välj en annan tid (FM/EF) eller ett annat datum.`;
+            // Update the existing message with the complete content
+            const completeContent = `**Redo att boka!**
 
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: (Date.now() + 3).toString(),
-                content,
-                isUser: false,
-                timestamp: new Date(),
-              },
-            ]);
+**Din bokning:**
+${
+  extractedData.numberOfPeople ? `${extractedData.numberOfPeople} personer` : ""
+}
+${
+  extractedData.date
+    ? new Date(extractedData.date).toLocaleDateString("sv-SE")
+    : ""
+}
+${extractedData.timeSlot ? `${extractedData.timeSlot}` : ""}
+${resourceType ? `${resourceType}` : ""}
+
+${
+  available.length > 0
+    ? `**Tillgängliga resurser:**\n${available
+        .map((r) => `- ${r.name}`)
+        .join(
+          "\n"
+        )}\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?`
+    : `**Inga resurser tillgängliga för valt datum/tid.**`
+}`;
+
+            // Update the existing message instead of adding a new one
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === bookingHelperMessage.id
+                  ? { ...msg, content: completeContent }
+                  : msg
+              )
+            );
           } catch (e) {
             console.warn("Failed to enrich availability list", e);
           }

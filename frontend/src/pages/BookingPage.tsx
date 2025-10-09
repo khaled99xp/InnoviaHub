@@ -334,8 +334,8 @@ export default function BookingsPage() {
                     resourceName: selectedResource.name,
                     resourceType:
                       selectedResource.resourceTypeName || "Unknown",
-                    bookingDate: selectedDateKey,
-                    timeslot:
+                    date: selectedDateKey,
+                    timeSlot:
                       timeOfDay === "Morning" ? "Förmiddag" : "Eftermiddag",
                     numberOfPeople: 1, // Default, can be made dynamic
                     price: 150, // Default price, can be made dynamic based on resource
