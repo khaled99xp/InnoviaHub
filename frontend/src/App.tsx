@@ -12,96 +12,97 @@ import AdminProtectedRoute from "./components/Admin/AdminProtectedRoute";
 import AdminWrapper from "./components/Admin/AdminWrapper";
 import "./App.css";
 import MyBookings from "./pages/MyBookings";
+import AIChatPage from "./pages/AIChat";
+import AIInsightsPage from "./pages/Admin/AIInsights";
+import Payment from "./pages/Payment";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop.tsx";
 
 function App() {
-    return (
-        <div className="App min-h-screen flex flex-col">
-            <ScrollToTop />
-            <Navbar />
-            <Routes>
-                {/* Main Website Routes */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route
-                    path="/bookings"
-                    element={
-                        <ProtectedRoute>
-                            <BookingPage />{" "}
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/myBookings"
-                    element={
-                        <ProtectedRoute>
-                            {" "}
-                            <MyBookings />{" "}
-                        </ProtectedRoute>
-                    }
-                />
+  return (
+    <div className="App min-h-screen flex flex-col">
+      <ScrollToTop />
+      <Navbar />
+      <Routes>
+        {/* Main Website Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route
+          path="/bookings"
+          element={
+            <ProtectedRoute>
+              <BookingPage />{" "}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/myBookings"
+          element={
+            <ProtectedRoute>
+              {" "}
+              <MyBookings />{" "}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-chat"
+          element={
+            <ProtectedRoute>
+              <AIChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payment"
+          element={
+            <ProtectedRoute>
+              <Payment />
+            </ProtectedRoute>
+          }
+        />
 
-                {/* Admin Routes with AdminAuthProvider */}
+        {/* Admin Routes with AdminAuthProvider */}
+        <Route
+          path="/admin/*"
+          element={
+            <AdminWrapper>
+              <Routes>
                 <Route
-                    path="/admin/*"
-                    element={
-                        <AdminWrapper>
-                            <Routes>
-                                <Route
-                                    path=""
-                                    element={
-                                        <AdminProtectedRoute>
-                                            <AdminLayout />
-                                        </AdminProtectedRoute>
-                                    }
-                                >
-                                    <Route
-                                        index
-                                        element={
-                                            <Navigate
-                                                to="/admin/dashboard"
-                                                replace
-                                            />
-                                        }
-                                    />
-                                    <Route
-                                        path="dashboard"
-                                        element={<Dashboard />}
-                                    />
-                                    <Route path="users" element={<Users />} />
-                                    <Route
-                                        path="bookings"
-                                        element={<Bookings />}
-                                    />
-                                    <Route
-                                        path="resources"
-                                        element={<Resources />}
-                                    />
-                                    <Route
-                                        path="*"
-                                        element={
-                                            <Navigate
-                                                to="/admin/dashboard"
-                                                replace
-                                            />
-                                        }
-                                    />
-                                </Route>
-                            </Routes>
-                        </AdminWrapper>
-                    }
-                />
+                  path=""
+                  element={
+                    <AdminProtectedRoute>
+                      <AdminLayout />
+                    </AdminProtectedRoute>
+                  }
+                >
+                  <Route
+                    index
+                    element={<Navigate to="/admin/dashboard" replace />}
+                  />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="users" element={<Users />} />
+                  <Route path="bookings" element={<Bookings />} />
+                  <Route path="resources" element={<Resources />} />
+                  <Route path="ai-insights" element={<AIInsightsPage />} />
+                  <Route
+                    path="*"
+                    element={<Navigate to="/admin/dashboard" replace />}
+                  />
+                </Route>
+              </Routes>
+            </AdminWrapper>
+          }
+        />
 
-                {/* Default redirect to home page */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            <Footer />
-        </div>
-    );
+        {/* Default redirect to home page */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <Footer />
+    </div>
+  );
 }
 
 export default App;

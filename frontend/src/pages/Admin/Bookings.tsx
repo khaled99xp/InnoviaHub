@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { FiClock, FiMapPin, FiEye, FiX } from "react-icons/fi";
 import { useBookings, useCancelBooking } from "../../hooks/useApi";
 import { useAdminAuth } from "../../context/AdminAuthProvider";
+import { useSignalR } from "../../hooks/useSignalR";
 import toast from "react-hot-toast";
 
 const Bookings: React.FC = () => {
@@ -24,6 +25,18 @@ const Bookings: React.FC = () => {
 
   const cancelBookingMutation = useCancelBooking();
 
+  // Get token for SignalR
+  const token = localStorage.getItem("token");
+
+  // Use SignalR for real-time updates
+  const { isConnected } = useSignalR({
+    token,
+    onRefreshData: async () => {
+      console.log("SignalR triggered refresh for bookings");
+      await refetch();
+    },
+  });
+
   // Handler functions
   const handleViewBooking = (booking: any) => {
     setSelectedBooking(booking);
@@ -40,7 +53,9 @@ const Bookings: React.FC = () => {
 
     try {
       await cancelBookingMutation.mutateAsync(selectedBooking.bookingId);
-      refetch();
+      // Force refresh data after successful cancellation
+      await refetch();
+      toast.success("Booking cancelled successfully");
     } catch (error) {
       console.error("Cancel booking error:", error);
       toast.error("Failed to cancel booking.");
@@ -63,6 +78,22 @@ const Bookings: React.FC = () => {
             <p className="text-gray-600 mt-1">
               Manage and monitor all system bookings
             </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div
+              className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm ${
+                isConnected
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isConnected ? "bg-green-500" : "bg-red-500"
+                }`}
+              ></div>
+              <span>{isConnected ? "Connected" : "Disconnected"}</span>
+            </div>
           </div>
         </div>
       </div>

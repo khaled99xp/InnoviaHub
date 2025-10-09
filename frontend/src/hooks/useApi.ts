@@ -590,10 +590,20 @@ export const useCancelBooking = () => {
     return useMutation({
         mutationFn: async (bookingId: number) => {
             const response = await apiService.cancelBooking(bookingId);
-            // Backend returns string "Success" on success
-            if (response === "Success") {
-                return response;
+            
+            // Check if response is a JSON object (success case)
+            try {
+                const jsonResponse = JSON.parse(response);
+                if (jsonResponse && typeof jsonResponse === 'object') {
+                    return jsonResponse; // Return the booking object
+                }
+            } catch (e) {
+                // If it's not JSON, check if it's "Success" string
+                if (response === "Success") {
+                    return response;
+                }
             }
+            
             // If it's an error response
             throw new Error(response || "Failed to cancel booking");
         },

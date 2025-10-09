@@ -1,14 +1,20 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import * as signalR from "@microsoft/signalr";
+import { useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { UserContext } from "@/context/UserContext";
 import type { Resource } from "@/types/resource";
-import type { Booking, BookingDTO } from "@/types/booking";
+import type { Booking } from "@/types/booking";
 import { fetchResources } from "@/api/resourceApi";
-import { fetchBookings, fetchMyBookings, createBooking, cancelBooking } from "@/api/bookingApi";
+import {
+  fetchBookings,
+  fetchMyBookings,
+  cancelBooking,
+} from "@/api/bookingApi";
 import ResourceCard from "@/components/Resource/ResourceCard";
 import CalendarComponent from "@/components/Calender/calenderComponent";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { useSignalR } from "@/hooks/useSignalR";
 
 //Builds a key form stockholm date, month year date
 const dateKeySthlm = (d: Date | string) => {
@@ -20,9 +26,9 @@ const dateKeySthlm = (d: Date | string) => {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(date);
-  const y = fmt.find(p => p.type === "year")?.value ?? "";
-  const m = fmt.find(p => p.type === "month")?.value ?? "";
-  const day = fmt.find(p => p.type === "day")?.value ?? "";
+  const y = fmt.find((p) => p.type === "year")?.value ?? "";
+  const m = fmt.find((p) => p.type === "month")?.value ?? "";
+  const day = fmt.find((p) => p.type === "day")?.value ?? "";
   return `${y}-${m}-${day}`;
 };
 
@@ -41,19 +47,37 @@ const currentSthlmHour = () =>
 const todayKeySthlm = () => dateKeySthlm(new Date());
 
 export default function BookingsPage() {
+  const navigate = useNavigate();
   const { token } = useContext(UserContext);
   const [resources, setResources] = useState<Resource[]>([]);
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(
+    null
+  );
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
-  const [timeOfDay, setTimeOfDay] = useState<"Morning" | "Afternoon" | null>(null);
+  const [timeOfDay, setTimeOfDay] = useState<"Morning" | "Afternoon" | null>(
+    null
+  );
 
-  //SignalR connection
-  const connectionRef = useRef<signalR.HubConnection | null>(null);
-  const hubUrl = useMemo(() => `${import.meta.env.VITE_API_BASE_URL}/bookingHub`, []);
+  // Memoized refresh data function
+  const refreshData = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [r, ab, mb] = await Promise.all([
+        fetchResources(token),
+        fetchBookings(token),
+        fetchMyBookings(token),
+      ]);
+      setResources(r);
+      setAllBookings(ab);
+      setMyBookings(mb);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  }, [token]);
 
   //Looking for booked slots, with help of stockholm date & time
   type DaySlots = { FM: boolean; EF: boolean };
@@ -84,7 +108,7 @@ export default function BookingsPage() {
         const [r, ab, mb] = await Promise.all([
           fetchResources(token),
           fetchBookings(token),
-          fetchMyBookings(token)
+          fetchMyBookings(token),
         ]);
         setResources(r);
         setAllBookings(ab);
@@ -98,106 +122,31 @@ export default function BookingsPage() {
     fetchData();
   }, [token]);
 
-  //Setup SignalR for real time updating
+  // Manual refresh function for real-time updates
+  const manualRefresh = useCallback(async () => {
+    if (!token) return;
+    try {
+      await refreshData();
+      toast.success("Data refreshed");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh data");
+    }
+  }, [token, refreshData]);
+
+  // Auto-refresh every 30 seconds
   useEffect(() => {
     if (!token) return;
 
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
-        accessTokenFactory: () => token || "",
-        skipNegotiation: true,
-        transport: signalR.HttpTransportType.WebSockets,
-      })
-      .withAutomaticReconnect()
-      .build();
+    const interval = setInterval(() => {
+      refreshData();
+    }, 30000); // 30 seconds
 
-    connectionRef.current = connection;
+    return () => clearInterval(interval);
+  }, [token, refreshData]);
 
-    const refreshData = async () => {
-      if (!token) return;
-      const [r, ab, mb] = await Promise.all([
-        fetchResources(token),
-        fetchBookings(token),
-        fetchMyBookings(token)
-      ]);
-      setResources(r);
-      setAllBookings(ab);
-      setMyBookings(mb);
-    };
-
-    const start = async () => {
-      try {
-        await connection.start();
-        console.log("SignalR connected");
-
-        connection.on("BookingCreated", refreshData);
-        connection.on("BookingUpdated", refreshData);
-        connection.on("BookingCancelled", refreshData);
-        connection.on("BookingDeleted", refreshData);
-        connection.on("ResourceUpdated", refreshData);
-      } catch (err) {
-        console.error("SignalR connect error:", err);
-        setTimeout(start, 5000);
-      }
-    };
-
-    start();
-
-    return () => {
-      connection.off("BookingCreated");
-      connection.off("BookingUpdated");
-      connection.off("BookingCancelled");
-      connection.off("BookingDeleted");
-      connection.off("ResourceUpdated");
-      connection.stop();
-    };
-  }, [token, hubUrl]);
-
-  //Creates booking
-  const handleBook = async (
-    resourceId: number,
-    dateKeyStr: string,
-    time: "Morning" | "Afternoon"
-  ) => {
-    if (!token) return;
-
-    const today = todayKeySthlm();
-    const hour = currentSthlmHour();
-
-    if (dateKeyStr === today) {
-      if (time === "Morning" && hour >= 12) {
-        toast.error("Morning has already passed today.");
-        return;
-      }
-      if (time === "Afternoon" && hour >= 16) {
-        toast.error("Afternoon has already passed today.");
-        return;
-      }
-    }
-
-    try {
-      const dto: BookingDTO = {
-        resourceId,
-        bookingDate: dateKeyStr,
-        timeslot: time === "Morning" ? "FM" : "EF",
-      };
-
-      await createBooking(token, dto);
-      toast.success("Booking created!");
-
-      const [r, ab, mb] = await Promise.all([
-        fetchResources(token),
-        fetchBookings(token),
-        fetchMyBookings(token)
-      ]);
-      setResources(r);
-      setAllBookings(ab);
-      setMyBookings(mb);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message ?? "Could not create booking");
-    }
-  };
+  // Use SignalR for real-time updates
+  const { isConnected } = useSignalR({ token, onRefreshData: refreshData });
 
   //Cancels booking
   const handleCancel = async (bookingId: number) => {
@@ -209,7 +158,7 @@ export default function BookingsPage() {
       const [r, ab, mb] = await Promise.all([
         fetchResources(token),
         fetchBookings(token),
-        fetchMyBookings(token)
+        fetchMyBookings(token),
       ]);
       setResources(r);
       setAllBookings(ab);
@@ -221,7 +170,9 @@ export default function BookingsPage() {
   };
 
   const desks = resources.filter((r) => r.resourceTypeName === "DropInDesk");
-  const meetingRooms = resources.filter((r) => r.resourceTypeName === "MeetingRoom");
+  const meetingRooms = resources.filter(
+    (r) => r.resourceTypeName === "MeetingRoom"
+  );
   const vrSets = resources.filter((r) => r.resourceTypeName === "VRset");
   const aiServers = resources.filter((r) => r.resourceTypeName === "AIserver");
 
@@ -250,10 +201,38 @@ export default function BookingsPage() {
 
   return (
     <div className="p-6 space-y-12">
-      {[{ title: "Desks", list: desks },
+      {/* Status Bar */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <div className="flex items-center gap-1 text-green-600 animate-pulse">
+              <Wifi className="w-4 h-4" />
+              <span className="text-sm">Real-time connected</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 text-red-600">
+              <WifiOff className="w-4 h-4" />
+              <span className="text-sm">Real-time disconnected</span>
+            </div>
+          )}
+        </div>
+
+        <Button
+          onClick={manualRefresh}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh Data
+        </Button>
+      </div>
+
+      {[
+        { title: "Desks", list: desks },
         { title: "Meeting Rooms", list: meetingRooms },
         { title: "VR Headsets", list: vrSets },
-        { title: "AI Server", list: aiServers }].map(
+        { title: "AI Server", list: aiServers },
+      ].map(
         ({ title, list }) =>
           list.length > 0 && (
             <div key={title}>
@@ -267,7 +246,10 @@ export default function BookingsPage() {
                 }}
               >
                 {list.map((r) => (
-                  <div key={r.resourceId} className="bg-white rounded-xl p-6 shadow-sm">
+                  <div
+                    key={r.resourceId}
+                    className="bg-white rounded-xl p-6 shadow-sm"
+                  >
                     <ResourceCard
                       resource={r}
                       allBookings={allBookings}
@@ -312,7 +294,9 @@ export default function BookingsPage() {
 
             {selectedDateKey && currentSlots && (
               <div>
-                <label className="block text-sm font-medium mb-1">Choose time</label>
+                <label className="block text-sm font-medium mb-1">
+                  Choose time
+                </label>
                 <select
                   className="border rounded-md p-2 w-full"
                   value={timeOfDay ?? ""}
@@ -325,7 +309,8 @@ export default function BookingsPage() {
                     Morning (08–12) {currentSlots.FM ? " - already booked" : ""}
                   </option>
                   <option value="Afternoon" disabled={currentSlots.efDisabled}>
-                    Afternoon (12–16) {currentSlots.EF ? " - already booked" : ""}
+                    Afternoon (12–16){" "}
+                    {currentSlots.EF ? " - already booked" : ""}
                   </option>
                 </select>
               </div>
@@ -342,14 +327,21 @@ export default function BookingsPage() {
                     toast.error("Please choose a time!");
                     return;
                   }
-                  handleBook(
-                    selectedResource.resourceId,
-                    selectedDateKey,
-                    timeOfDay
-                  );
-                  setSelectedResource(null);
-                  setSelectedDateKey(null);
-                  setTimeOfDay(null);
+
+                  // Navigate to payment page with booking details
+                  const bookingDetails = {
+                    resourceId: selectedResource.resourceId,
+                    resourceName: selectedResource.name,
+                    resourceType:
+                      selectedResource.resourceTypeName || "Unknown",
+                    bookingDate: selectedDateKey,
+                    timeslot:
+                      timeOfDay === "Morning" ? "Förmiddag" : "Eftermiddag",
+                    numberOfPeople: 1, // Default, can be made dynamic
+                    price: 150, // Default price, can be made dynamic based on resource
+                  };
+
+                  navigate("/payment", { state: { bookingDetails } });
                 }}
               >
                 Confirm Booking

@@ -73,29 +73,66 @@ namespace backend.Services
             var startUtc = startLocal.ToUniversalTime();
             var endUtc   = endLocal.ToUniversalTime();
 
-            //Check if timeslot already booked
-            var conflict = await _context.Bookings.AnyAsync(b =>
-                b.ResourceId == dto.ResourceId &&
-                b.IsActive &&
-                b.BookingDate == startUtc &&
-                b.EndDate == endUtc
-            );
-            if (conflict) throw new Exception("Timeslot already booked");
-
-            //Save booking
-            var booking = new Booking
+            // Retry mechanism for concurrent bookings
+            const int maxRetries = 3;
+            for (int attempt = 0; attempt < maxRetries; attempt++)
             {
-                IsActive = true,
-                BookingDate = startUtc,
-                EndDate = endUtc,
-                UserId = userId,
-                ResourceId = dto.ResourceId,
-                Timeslot = dto.Timeslot
-            };
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    //Check if timeslot already booked (with lock)
+                    var conflict = await _context.Bookings
+                        .Where(b => b.ResourceId == dto.ResourceId && b.IsActive)
+                        .AnyAsync(b => 
+                            (b.BookingDate <= startUtc && b.EndDate > startUtc) ||
+                            (b.BookingDate < endUtc && b.EndDate >= endUtc) ||
+                            (b.BookingDate >= startUtc && b.EndDate <= endUtc)
+                        );
+                    
+                    if (conflict) 
+                    {
+                        await transaction.RollbackAsync();
+                        if (attempt == maxRetries - 1)
+                            throw new Exception("Timeslot already booked");
+                        
+                        // Wait a bit before retry
+                        await Task.Delay(100 * (attempt + 1));
+                        continue;
+                    }
 
-            var created = await _repository.CreateAsync(booking);
-            await _hubContext.Clients.All.SendAsync("Booking created", created);
-            return created;
+                    //Save booking
+                    var booking = new Booking
+                    {
+                        IsActive = true,
+                        BookingDate = startUtc,
+                        EndDate = endUtc,
+                        UserId = userId,
+                        ResourceId = dto.ResourceId,
+                        Timeslot = dto.Timeslot
+                    };
+
+                    var created = await _repository.CreateAsync(booking);
+                    await transaction.CommitAsync();
+                    
+                    await _hubContext.Clients.All.SendAsync("BookingCreated", created);
+                    return created;
+                }
+                catch (Exception ex) when (ex.Message.Contains("duplicate") || ex.Message.Contains("unique"))
+                {
+                    await transaction.RollbackAsync();
+                    if (attempt == maxRetries - 1)
+                        throw new Exception("Timeslot already booked");
+                    
+                    await Task.Delay(100 * (attempt + 1));
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            
+            throw new Exception("Failed to create booking after multiple attempts");
         }
 
         //Update booking
@@ -104,7 +141,7 @@ namespace backend.Services
             var updated = await _repository.UpdateAsync(booking);
             if (updated != null)
             {
-                await _hubContext.Clients.All.SendAsync("Booking updated", updated);
+                await _hubContext.Clients.All.SendAsync("BookingUpdated", updated);
             }
             return updated;
         }
@@ -115,7 +152,7 @@ namespace backend.Services
             var booking = await _repository.CancelBookingAsync(userId, isAdmin, bookingId);
             if (booking != null)
             {
-                await _hubContext.Clients.All.SendAsync("Booking cancelled", booking);
+                await _hubContext.Clients.All.SendAsync("BookingCancelled", booking);
             }
             return booking;
         }
@@ -130,10 +167,10 @@ namespace backend.Services
                 if (resource != null)
                 {
                     resource.IsBooked = false;
-                    await _hubContext.Clients.All.SendAsync("Resource updated", resource);
+                    await _hubContext.Clients.All.SendAsync("ResourceUpdated", resource);
                 }
 
-                await _hubContext.Clients.All.SendAsync("Booking deleted", booking);
+                await _hubContext.Clients.All.SendAsync("BookingDeleted", booking);
             }
             return booking;
         }

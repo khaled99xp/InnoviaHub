@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using backend.Models;
+using backend.Models.AI;
 
 namespace backend.Data
 {
@@ -15,15 +16,20 @@ namespace backend.Data
         public DbSet<ResourceType> ResourceTypes { get; set; }
         public DbSet<Resource> Resources { get; set; }
         public DbSet<Booking> Bookings { get; set; }
+        
+        // AI Models
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<AIInsight> AIInsights { get; set; }
+        public DbSet<ResourceRecommendation> ResourceRecommendations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // To hinder double booking 
+            // To hinder double booking - prevent overlapping bookings
             modelBuilder.Entity<Booking>()
-                 .HasIndex(b => new { b.ResourceId, b.BookingDate, b.EndDate })
-                 .IsUnique();
+                .HasIndex(b => new { b.ResourceId, b.BookingDate, b.EndDate })
+                .IsUnique();
 
             // Seed ResourceTypes
             modelBuilder.Entity<ResourceType>().HasData(

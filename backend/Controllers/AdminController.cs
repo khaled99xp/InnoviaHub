@@ -17,11 +17,11 @@ namespace backend.Controllers
     [Produces("application/json")]
     public class AdminController : ControllerBase
     {
-        private readonly IAdminService _adminService;
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
-        private readonly IJwtTokenManager _jwtTokenManager;
-        private readonly ILogger<AdminController> _logger;
+        private readonly IAdminService _adminService; // Admin service för användarhantering
+        private readonly UserManager<ApplicationUser> _userManager; // User manager för användaroperationer
+        private readonly RoleManager<IdentityRole> _roleManager; // Role manager för rollhantering
+        private readonly IJwtTokenManager _jwtTokenManager; // JWT token manager för autentisering
+        private readonly ILogger<AdminController> _logger; // Logger för att spåra aktivitet
 
         public AdminController(
             IAdminService adminService,
@@ -30,18 +30,13 @@ namespace backend.Controllers
             IJwtTokenManager jwtTokenManager,
             ILogger<AdminController> logger)
         {
-            _adminService = adminService;
-            _userManager = userManager;
-            _roleManager = roleManager;
-            _jwtTokenManager = jwtTokenManager;
-            _logger = logger;
+            _adminService = adminService; // Tilldela admin service
+            _userManager = userManager; // Tilldela user manager
+            _roleManager = roleManager; // Tilldela role manager
+            _jwtTokenManager = jwtTokenManager; // Tilldela JWT token manager
+            _logger = logger; // Tilldela logger
         }
 
-        /// <summary>
-        /// Get list of users with search and filtering capabilities
-        /// </summary>
-        /// <param name="searchDto">Search and filter criteria</param>
-        /// <returns>List of users with pagination information</returns>
         [HttpGet("users")]
         [ProducesResponseType(typeof(PagedResultDto<AdminUserDto>), 200)]
         [ProducesResponseType(400)]
@@ -51,41 +46,36 @@ namespace backend.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) // Kontrollera om modellvalidering är giltig
                 {
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Invalid data provided",
                         Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
+                    }); // Returnera fel om validering misslyckas
                 }
 
-                var result = await _adminService.GetUsersAsync(searchDto);
+                var result = await _adminService.GetUsersAsync(searchDto); // Hämta användare via admin service
                 return Ok(new ApiResponseDto<PagedResultDto<AdminUserDto>>
                 {
                     Success = true,
                     Message = "Users retrieved successfully",
                     Data = result
-                });
+                }); // Returnera användare som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting users");
+                _logger.LogError(ex, "Error getting users"); // Logga fel vid hämtning av användare
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving users",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Get a specific user by ID
-        /// </summary>
-        /// <param name="id">User ID</param>
-        /// <returns>User data</returns>
         [HttpGet("users/{id}")]
         [ProducesResponseType(typeof(AdminUserDto), 200)]
         [ProducesResponseType(404)]
@@ -95,15 +85,15 @@ namespace backend.Controllers
         {
             try
             {
-                var user = await _adminService.GetUserByIdAsync(id);
-                if (user == null)
+                var user = await _adminService.GetUserByIdAsync(id); // Hämta användare via ID
+                if (user == null) // Kontrollera om användare finns
                 {
                     return NotFound(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "User not found",
                         Errors = new List<string> { "User not found" }
-                    });
+                    }); // Returnera 404 om användare inte hittades
                 }
 
                 return Ok(new ApiResponseDto<AdminUserDto>
@@ -111,25 +101,20 @@ namespace backend.Controllers
                     Success = true,
                     Message = "User retrieved successfully",
                     Data = user
-                });
+                }); // Returnera användare som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting user by ID: {UserId}", id);
+                _logger.LogError(ex, "Error getting user by ID: {UserId}", id); // Logga fel vid hämtning av användare
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving user",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Create a new user
-        /// </summary>
-        /// <param name="createUserDto">New user data</param>
-        /// <returns>Created user data</returns>
         [HttpPost("users")]
         [ProducesResponseType(typeof(AdminUserDto), 201)]
         [ProducesResponseType(400)]
@@ -139,42 +124,36 @@ namespace backend.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) // Kontrollera om modellvalidering är giltig
                 {
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Invalid data provided",
                         Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
+                    }); // Returnera fel om validering misslyckas
                 }
 
-                var result = await _adminService.CreateUserAsync(createUserDto);
-                if (!result.Success)
+                var result = await _adminService.CreateUserAsync(createUserDto); // Skapa användare via admin service
+                if (!result.Success) // Kontrollera om skapandet lyckades
                 {
-                    return BadRequest(result);
+                    return BadRequest(result); // Returnera fel om skapandet misslyckades
                 }
 
-                return CreatedAtAction(nameof(GetUserById), new { id = result.Data!.Id }, result);
+                return CreatedAtAction(nameof(GetUserById), new { id = result.Data!.Id }, result); // Returnera skapad användare
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating user");
+                _logger.LogError(ex, "Error creating user"); // Logga fel vid skapande av användare
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while creating user",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Update user data
-        /// </summary>
-        /// <param name="id">User ID</param>
-        /// <param name="updateUserDto">Updated user data</param>
-        /// <returns>Updated user data</returns>
         [HttpPut("users/{id}")]
         [ProducesResponseType(typeof(AdminUserDto), 200)]
         [ProducesResponseType(400)]
@@ -185,65 +164,61 @@ namespace backend.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) // Kontrollera om modellvalidering är giltig
                 {
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Invalid data provided",
                         Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
+                    }); // Returnera fel om validering misslyckas
                 }
 
-                var result = await _adminService.UpdateUserAsync(id, updateUserDto);
-                if (!result.Success)
+                var result = await _adminService.UpdateUserAsync(id, updateUserDto); // Uppdatera användare via admin service
+                if (!result.Success) // Kontrollera om uppdateringen lyckades
                 {
-                    return result.Data == null ? NotFound(result) : BadRequest(result);
+                    return result.Data == null ? NotFound(result) : BadRequest(result); // Returnera 404 eller 400 baserat på resultat
                 }
 
-                return Ok(result);
+                return Ok(result); // Returnera uppdaterad användare
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating user: {UserId}", id);
+                _logger.LogError(ex, "Error updating user: {UserId}", id); // Logga fel vid uppdatering av användare
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while updating user",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
         [HttpPut("users/{id}/role")]
         public async Task<IActionResult> UpdateUserRole(string id, [FromBody] UpdateRoleDto updateRoleDto)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
-                return NotFound("User not found");
+            var user = await _userManager.FindByIdAsync(id); // Hämta användare via ID
+            if (user == null) // Kontrollera om användare finns
+                return NotFound("User not found"); // Returnera 404 om användare inte hittades
 
-            // Check if role exists
-            var roleExists = await _roleManager.RoleExistsAsync(updateRoleDto.Role);
-            if (!roleExists)
-                return BadRequest("Role does not exist");
+            var roleExists = await _roleManager.RoleExistsAsync(updateRoleDto.Role); // Kontrollera om rollen finns
+            if (!roleExists) // Kontrollera om rollen existerar
+                return BadRequest("Role does not exist"); // Returnera fel om rollen inte finns
 
-            // Remove current roles
-            var currentRoles = await _userManager.GetRolesAsync(user);
-            if (currentRoles.Any())
+            var currentRoles = await _userManager.GetRolesAsync(user); // Hämta nuvarande roller
+            if (currentRoles.Any()) // Kontrollera om användaren har roller
             {
-                await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                await _userManager.RemoveFromRolesAsync(user, currentRoles); // Ta bort nuvarande roller
             }
 
-            // Add new role
-            await _userManager.AddToRoleAsync(user, updateRoleDto.Role);
+            await _userManager.AddToRoleAsync(user, updateRoleDto.Role); // Lägg till ny roll
 
-            // Update user role
-            user.Role = updateRoleDto.Role;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.Role = updateRoleDto.Role; // Uppdatera användarroll
+            user.UpdatedAt = DateTime.UtcNow; // Uppdatera tidsstämpel
 
-            var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+            var result = await _userManager.UpdateAsync(user); // Uppdatera användare
+            if (!result.Succeeded) // Kontrollera om uppdateringen lyckades
+                return BadRequest(result.Errors); // Returnera fel om uppdateringen misslyckades
 
             return Ok(new
             {
@@ -258,22 +233,22 @@ namespace backend.Controllers
                     user.IsActive,
                     user.UpdatedAt
                 }
-            });
+            }); // Returnera uppdaterad användare
         }
 
         [HttpPut("users/{id}/status")]
         public async Task<IActionResult> UpdateUserStatus(string id, [FromBody] UpdateStatusDto updateStatusDto)
         {
-            var user = await _userManager.FindByIdAsync(id);
-            if (user == null)
-                return NotFound("User not found");
+            var user = await _userManager.FindByIdAsync(id); // Hämta användare via ID
+            if (user == null) // Kontrollera om användare finns
+                return NotFound("User not found"); // Returnera 404 om användare inte hittades
 
-            user.IsActive = updateStatusDto.IsActive;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.IsActive = updateStatusDto.IsActive; // Uppdatera användarstatus
+            user.UpdatedAt = DateTime.UtcNow; // Uppdatera tidsstämpel
 
-            var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+            var result = await _userManager.UpdateAsync(user); // Uppdatera användare
+            if (!result.Succeeded) // Kontrollera om uppdateringen lyckades
+                return BadRequest(result.Errors); // Returnera fel om uppdateringen misslyckades
 
             return Ok(new
             {
@@ -288,7 +263,7 @@ namespace backend.Controllers
                     user.IsActive,
                     user.UpdatedAt
                 }
-            });
+            }); // Returnera uppdaterad användare
         }
 
         [HttpDelete("users/{id}")]
@@ -296,39 +271,39 @@ namespace backend.Controllers
         {
             try
             {
-                var user = await _userManager.FindByIdAsync(id);
-                if (user == null)
+                var user = await _userManager.FindByIdAsync(id); // Hämta användare via ID
+                if (user == null) // Kontrollera om användare finns
                     return NotFound(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "User not found"
-                    });
+                    }); // Returnera 404 om användare inte hittades
 
-                var result = await _userManager.DeleteAsync(user);
-                if (!result.Succeeded)
+                var result = await _userManager.DeleteAsync(user); // Ta bort användare
+                if (!result.Succeeded) // Kontrollera om borttagningen lyckades
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Failed to delete user",
                         Errors = result.Errors.Select(e => e.Description).ToList()
-                    });
+                    }); // Returnera fel om borttagningen misslyckades
 
                 return Ok(new ApiResponseDto<object>
                 {
                     Success = true,
                     Message = "User deleted successfully",
                     Data = null
-                });
+                }); // Returnera lyckat resultat
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting user {UserId}", id);
+                _logger.LogError(ex, "Error deleting user {UserId}", id); // Logga fel vid borttagning av användare
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while deleting the user",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
@@ -337,34 +312,30 @@ namespace backend.Controllers
         {
             var roles = await _roleManager.Roles
                 .Select(r => new { r.Id, r.Name })
-                .ToListAsync();
+                .ToListAsync(); // Hämta alla roller från databasen
 
-            return Ok(roles);
+            return Ok(roles); // Returnera roller som OK response
         }
 
         [HttpPost("roles")]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto createRoleDto)
         {
-            if (await _roleManager.RoleExistsAsync(createRoleDto.Name))
-                return BadRequest("Role already exists");
+            if (await _roleManager.RoleExistsAsync(createRoleDto.Name)) // Kontrollera om rollen redan finns
+                return BadRequest("Role already exists"); // Returnera fel om rollen redan finns
 
-            var role = new IdentityRole(createRoleDto.Name);
-            var result = await _roleManager.CreateAsync(role);
+            var role = new IdentityRole(createRoleDto.Name); // Skapa ny roll
+            var result = await _roleManager.CreateAsync(role); // Skapa roll i databasen
 
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+            if (!result.Succeeded) // Kontrollera om skapandet lyckades
+                return BadRequest(result.Errors); // Returnera fel om skapandet misslyckades
 
             return Ok(new
             {
                 message = "Role created successfully",
                 role = new { role.Id, role.Name }
-            });
+            }); // Returnera skapad roll
         }
 
-        /// <summary>
-        /// Get main dashboard data
-        /// </summary>
-        /// <returns>Dashboard statistics and data</returns>
         [HttpGet("dashboard")]
         [ProducesResponseType(typeof(AdminDashboardDto), 200)]
         [ProducesResponseType(401)]
@@ -373,31 +344,27 @@ namespace backend.Controllers
         {
             try
             {
-                var dashboardData = await _adminService.GetDashboardDataAsync();
+                var dashboardData = await _adminService.GetDashboardDataAsync(); // Hämta dashboard data via admin service
 
                 return Ok(new ApiResponseDto<AdminDashboardDto>
                 {
                     Success = true,
                     Message = "Dashboard data retrieved successfully",
                     Data = dashboardData
-                });
+                }); // Returnera dashboard data som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting dashboard data: {Message}", ex.Message);
+                _logger.LogError(ex, "Error getting dashboard data: {Message}", ex.Message); // Logga fel vid hämtning av dashboard data
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving dashboard data",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Get booking statistics
-        /// </summary>
-        /// <returns>Detailed booking statistics</returns>
         [HttpGet("bookings/stats")]
         [ProducesResponseType(typeof(BookingStatsDto), 200)]
         [ProducesResponseType(401)]
@@ -406,31 +373,26 @@ namespace backend.Controllers
         {
             try
             {
-                var stats = await _adminService.GetBookingStatsAsync();
+                var stats = await _adminService.GetBookingStatsAsync(); // Hämta bokningsstatistik via admin service
                 return Ok(new ApiResponseDto<BookingStatsDto>
                 {
                     Success = true,
                     Message = "Booking statistics retrieved successfully",
                     Data = stats
-                });
+                }); // Returnera bokningsstatistik som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting booking stats");
+                _logger.LogError(ex, "Error getting booking stats"); // Logga fel vid hämtning av bokningsstatistik
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving booking statistics",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Get list of bookings with search and filtering capabilities
-        /// </summary>
-        /// <param name="searchDto">Search and filter criteria</param>
-        /// <returns>List of bookings with pagination information</returns>
         [HttpGet("bookings")]
         [ProducesResponseType(typeof(PagedResultDto<AdminBookingDto>), 200)]
         [ProducesResponseType(400)]
@@ -440,42 +402,36 @@ namespace backend.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) // Kontrollera om modellvalidering är giltig
                 {
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Invalid data provided",
                         Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
+                    }); // Returnera fel om validering misslyckas
                 }
 
-                var result = await _adminService.GetBookingsAsync(searchDto);
+                var result = await _adminService.GetBookingsAsync(searchDto); // Hämta bokningar via admin service
                 return Ok(new ApiResponseDto<PagedResultDto<AdminBookingDto>>
                 {
                     Success = true,
                     Message = "Bookings retrieved successfully",
                     Data = result
-                });
+                }); // Returnera bokningar som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting bookings");
+                _logger.LogError(ex, "Error getting bookings"); // Logga fel vid hämtning av bokningar
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving bookings",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Cancel a booking
-        /// </summary>
-        /// <param name="bookingId">Booking ID</param>
-        /// <param name="reason">Cancellation reason</param>
-        /// <returns>Operation result</returns>
         [HttpPost("bookings/{bookingId}/cancel")]
         [ProducesResponseType(typeof(ApiResponseDto<bool>), 200)]
         [ProducesResponseType(400)]
@@ -486,30 +442,26 @@ namespace backend.Controllers
         {
             try
             {
-                var result = await _adminService.CancelBookingAsync(bookingId, reason);
-                if (!result.Success)
+                var result = await _adminService.CancelBookingAsync(bookingId, reason); // Avbryt bokning via admin service
+                if (!result.Success) // Kontrollera om avbrytandet lyckades
                 {
-                    return result.Data == false ? NotFound(result) : BadRequest(result);
+                    return result.Data == false ? NotFound(result) : BadRequest(result); // Returnera 404 eller 400 baserat på resultat
                 }
 
-                return Ok(result);
+                return Ok(result); // Returnera lyckat resultat
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cancelling booking: {BookingId}", bookingId);
+                _logger.LogError(ex, "Error cancelling booking: {BookingId}", bookingId); // Logga fel vid avbrytande av bokning
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while cancelling booking",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Clean up expired bookings
-        /// </summary>
-        /// <returns>Operation result</returns>
         [HttpPost("system/cleanup")]
         [ProducesResponseType(typeof(ApiResponseDto<bool>), 200)]
         [ProducesResponseType(401)]
@@ -518,26 +470,21 @@ namespace backend.Controllers
         {
             try
             {
-                var result = await _adminService.CleanupExpiredBookingsAsync();
-                return Ok(result);
+                var result = await _adminService.CleanupExpiredBookingsAsync(); // Rensa ut utgångna bokningar via admin service
+                return Ok(result); // Returnera resultat som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cleaning up expired bookings");
+                _logger.LogError(ex, "Error cleaning up expired bookings"); // Logga fel vid rensning av utgångna bokningar
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while cleaning up expired bookings",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Get system logs
-        /// </summary>
-        /// <param name="count">Number of logs requested</param>
-        /// <returns>List of system logs</returns>
         [HttpGet("system/logs")]
         [ProducesResponseType(typeof(List<string>), 200)]
         [ProducesResponseType(401)]
@@ -546,33 +493,27 @@ namespace backend.Controllers
         {
             try
             {
-                var logs = await _adminService.GetSystemLogsAsync(count);
+                var logs = await _adminService.GetSystemLogsAsync(count); // Hämta systemloggar via admin service
                 return Ok(new ApiResponseDto<List<string>>
                 {
                     Success = true,
                     Message = "System logs retrieved successfully",
                     Data = logs
-                });
+                }); // Returnera systemloggar som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting system logs");
+                _logger.LogError(ex, "Error getting system logs"); // Logga fel vid hämtning av systemloggar
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving system logs",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
 
-        /// <summary>
-        /// Get all resources with pagination
-        /// </summary>
-        /// <param name="page">Page number</param>
-        /// <param name="pageSize">Page size</param>
-        /// <returns>List of resources</returns>
         [HttpGet("resources")]
         [ProducesResponseType(typeof(ApiResponseDto<PagedResultDto<AdminResourceDto>>), 200)]
         [ProducesResponseType(401)]
@@ -581,30 +522,26 @@ namespace backend.Controllers
         {
             try
             {
-                var result = await _adminService.GetResourcesAsync(page, pageSize);
+                var result = await _adminService.GetResourcesAsync(page, pageSize); // Hämta resurser via admin service
                 return Ok(new ApiResponseDto<PagedResultDto<AdminResourceDto>>
                 {
                     Success = true,
                     Message = "Resources retrieved successfully",
                     Data = result
-                });
+                }); // Returnera resurser som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting resources");
+                _logger.LogError(ex, "Error getting resources"); // Logga fel vid hämtning av resurser
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while getting resources",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Get all resource types
-        /// </summary>
-        /// <returns>List of resource types</returns>
         [HttpGet("resource-types")]
         [ProducesResponseType(typeof(ApiResponseDto<List<ResourceTypeDto>>), 200)]
         [ProducesResponseType(401)]
@@ -613,31 +550,26 @@ namespace backend.Controllers
         {
             try
             {
-                var result = await _adminService.GetResourceTypesAsync();
+                var result = await _adminService.GetResourceTypesAsync(); // Hämta resurstyper via admin service
                 return Ok(new ApiResponseDto<List<ResourceTypeDto>>
                 {
                     Success = true,
                     Message = "Resource types retrieved successfully",
                     Data = result
-                });
+                }); // Returnera resurstyper som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting resource types");
+                _logger.LogError(ex, "Error getting resource types"); // Logga fel vid hämtning av resurstyper
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while getting resource types",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Get a specific resource by ID
-        /// </summary>
-        /// <param name="id">Resource ID</param>
-        /// <returns>Resource data</returns>
         [HttpGet("resources/{id}")]
         [ProducesResponseType(typeof(ApiResponseDto<AdminResourceDto>), 200)]
         [ProducesResponseType(404)]
@@ -647,15 +579,15 @@ namespace backend.Controllers
         {
             try
             {
-                var resource = await _adminService.GetResourceByIdAsync(id);
-                if (resource == null)
+                var resource = await _adminService.GetResourceByIdAsync(id); // Hämta resurs via ID
+                if (resource == null) // Kontrollera om resurs finns
                 {
                     return NotFound(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Resource not found",
                         Errors = new List<string> { "Resource not found" }
-                    });
+                    }); // Returnera 404 om resurs inte hittades
                 }
 
                 return Ok(new ApiResponseDto<AdminResourceDto>
@@ -663,25 +595,20 @@ namespace backend.Controllers
                     Success = true,
                     Message = "Resource retrieved successfully",
                     Data = resource
-                });
+                }); // Returnera resurs som OK response
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting resource by ID: {ResourceId}", id);
+                _logger.LogError(ex, "Error getting resource by ID: {ResourceId}", id); // Logga fel vid hämtning av resurs
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while retrieving resource",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Create a new resource
-        /// </summary>
-        /// <param name="createResourceDto">New resource data</param>
-        /// <returns>Created resource data</returns>
         [HttpPost("resources")]
         [ProducesResponseType(typeof(ApiResponseDto<AdminResourceDto>), 201)]
         [ProducesResponseType(400)]
@@ -691,42 +618,36 @@ namespace backend.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) // Kontrollera om modellvalidering är giltig
                 {
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Invalid data provided",
                         Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
+                    }); // Returnera fel om validering misslyckas
                 }
 
-                var result = await _adminService.CreateResourceAsync(createResourceDto);
-                if (!result.Success)
+                var result = await _adminService.CreateResourceAsync(createResourceDto); // Skapa resurs via admin service
+                if (!result.Success) // Kontrollera om skapandet lyckades
                 {
-                    return BadRequest(result);
+                    return BadRequest(result); // Returnera fel om skapandet misslyckades
                 }
 
-                return CreatedAtAction(nameof(GetResourceById), new { id = result.Data!.ResourceId }, result);
+                return CreatedAtAction(nameof(GetResourceById), new { id = result.Data!.ResourceId }, result); // Returnera skapad resurs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating resource");
+                _logger.LogError(ex, "Error creating resource"); // Logga fel vid skapande av resurs
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while creating resource",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Update resource data
-        /// </summary>
-        /// <param name="id">Resource ID</param>
-        /// <param name="updateResourceDto">Updated resource data</param>
-        /// <returns>Updated resource data</returns>
         [HttpPut("resources/{id}")]
         [ProducesResponseType(typeof(ApiResponseDto<AdminResourceDto>), 200)]
         [ProducesResponseType(400)]
@@ -737,41 +658,36 @@ namespace backend.Controllers
         {
             try
             {
-                if (!ModelState.IsValid)
+                if (!ModelState.IsValid) // Kontrollera om modellvalidering är giltig
                 {
                     return BadRequest(new ApiResponseDto<object>
                     {
                         Success = false,
                         Message = "Invalid data provided",
                         Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                    });
+                    }); // Returnera fel om validering misslyckas
                 }
 
-                var result = await _adminService.UpdateResourceAsync(id, updateResourceDto);
-                if (!result.Success)
+                var result = await _adminService.UpdateResourceAsync(id, updateResourceDto); // Uppdatera resurs via admin service
+                if (!result.Success) // Kontrollera om uppdateringen lyckades
                 {
-                    return result.Data == null ? NotFound(result) : BadRequest(result);
+                    return result.Data == null ? NotFound(result) : BadRequest(result); // Returnera 404 eller 400 baserat på resultat
                 }
 
-                return Ok(result);
+                return Ok(result); // Returnera uppdaterad resurs
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating resource: {ResourceId}", id);
+                _logger.LogError(ex, "Error updating resource: {ResourceId}", id); // Logga fel vid uppdatering av resurs
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while updating resource",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Delete a resource
-        /// </summary>
-        /// <param name="id">Resource ID</param>
-        /// <returns>Operation result</returns>
         [HttpDelete("resources/{id}")]
         [ProducesResponseType(typeof(ApiResponseDto<bool>), 200)]
         [ProducesResponseType(400)]
@@ -782,30 +698,26 @@ namespace backend.Controllers
         {
             try
             {
-                var result = await _adminService.DeleteResourceAsync(id);
-                if (!result.Success)
+                var result = await _adminService.DeleteResourceAsync(id); // Ta bort resurs via admin service
+                if (!result.Success) // Kontrollera om borttagningen lyckades
                 {
-                    return result.Data == false ? NotFound(result) : BadRequest(result);
+                    return result.Data == false ? NotFound(result) : BadRequest(result); // Returnera 404 eller 400 baserat på resultat
                 }
 
-                return Ok(result);
+                return Ok(result); // Returnera lyckat resultat
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting resource: {ResourceId}", id);
+                _logger.LogError(ex, "Error deleting resource: {ResourceId}", id); // Logga fel vid borttagning av resurs
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred while deleting resource",
                     Errors = new List<string> { ex.Message }
-                });
+                }); // Returnera serverfel
             }
         }
 
-        /// <summary>
-        /// Logout admin user
-        /// </summary>
-        /// <returns>Logout confirmation</returns>
         [HttpPost("auth/logout")]
         [ProducesResponseType(typeof(ApiResponseDto<object>), 200)]
         [ProducesResponseType(401)]
@@ -813,12 +725,7 @@ namespace backend.Controllers
         {
             try
             {
-                _logger.LogInformation("Admin user logout");
-                
-                // In a real application, you might want to:
-                // 1. Add the token to a blacklist
-                // 2. Log the logout event
-                // 3. Clear any server-side sessions
+                _logger.LogInformation("Admin user logout"); // Logga admin-utloggning
                 
                 return Ok(new ApiResponseDto<object>
                 {
@@ -826,18 +733,18 @@ namespace backend.Controllers
                     Message = "Logged out successfully",
                     Data = null,
                     Timestamp = DateTime.UtcNow
-                });
+                }); // Returnera lyckat utloggningsresultat
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during logout");
+                _logger.LogError(ex, "Error during logout"); // Logga fel vid utloggning
                 return StatusCode(500, new ApiResponseDto<object>
                 {
                     Success = false,
                     Message = "An error occurred during logout",
                     Errors = new List<string> { ex.Message },
                     Timestamp = DateTime.UtcNow
-                });
+                }); // Returnera serverfel
             }
         }
     }

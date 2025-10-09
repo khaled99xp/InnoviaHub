@@ -1,7 +1,9 @@
 // Admin Dashboard Constants
 
 // API Configuration
-export const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api`;
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
+  ? `${import.meta.env.VITE_API_BASE_URL}/api` 
+  : 'http://localhost:5296/api';
 export const ADMIN_API_BASE_URL = API_BASE_URL;
 
 // API Endpoints
@@ -62,6 +64,12 @@ export const NAV_ITEMS = [
         label: "Resources",
         icon: "MdBusiness",
         path: "/admin/resources",
+    },
+    {
+        id: "ai-insights",
+        label: "AI Insights",
+        icon: "MdAnalytics",
+        path: "/admin/ai-insights",
     },
 ] as const;
 

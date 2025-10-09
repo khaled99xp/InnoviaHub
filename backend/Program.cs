@@ -29,6 +29,10 @@ builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IAIService, AIService>();
+
+// Add HTTP Client for OpenAI
+builder.Services.AddHttpClient<IAIService, AIService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -83,6 +87,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
             "http://localhost:5173",    // development
+            "http://localhost:3000",   // alternative dev port
             "https://innovia-hub.netlify.app"   // production
             )
               .AllowAnyHeader()
@@ -108,7 +113,13 @@ if (!string.IsNullOrEmpty(azureSignalRConnection))
 }
 else
 {
-    builder.Services.AddSignalR();
+    builder.Services.AddSignalR(options =>
+    {
+        options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+        options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+        options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    });
 }
 
 // Add JWT Token Manager
@@ -143,11 +154,13 @@ app.UseMiddleware<RequestLoggingMiddleware>();
 
 app.UseCors("FrontendPolicy");
 
-app.MapHub<BookingHub>("/bookingHub").RequireCors("FrontendPolicy");
-
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Map SignalR Hub
+app.MapHub<BookingHub>("/bookingHub");
+
 app.UseStaticFiles();
 app.MapControllers().RequireCors("FrontendPolicy");
 app.Run();

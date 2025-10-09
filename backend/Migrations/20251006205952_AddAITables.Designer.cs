@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using backend.Data;
 
@@ -11,9 +12,11 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251006205952_AddAITables")]
+    partial class AddAITables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -188,7 +191,7 @@ namespace backend.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AIInsights", (string)null);
+                    b.ToTable("AIInsights");
                 });
 
             modelBuilder.Entity("backend.Models.AI.ChatMessage", b =>
@@ -224,7 +227,7 @@ namespace backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ChatMessages", (string)null);
+                    b.ToTable("ChatMessages");
                 });
 
             modelBuilder.Entity("backend.Models.AI.ResourceRecommendation", b =>
@@ -268,7 +271,7 @@ namespace backend.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ResourceRecommendations", (string)null);
+                    b.ToTable("ResourceRecommendations");
                 });
 
             modelBuilder.Entity("backend.Models.ApplicationUser", b =>
@@ -391,7 +394,7 @@ namespace backend.Migrations
                     b.HasIndex("ResourceId", "BookingDate", "EndDate")
                         .IsUnique();
 
-                    b.ToTable("Bookings", (string)null);
+                    b.ToTable("Bookings");
                 });
 
             modelBuilder.Entity("backend.Models.Resource", b =>
@@ -416,7 +419,7 @@ namespace backend.Migrations
 
                     b.HasIndex("ResourceTypeId");
 
-                    b.ToTable("Resources", (string)null);
+                    b.ToTable("Resources");
 
                     b.HasData(
                         new
@@ -603,7 +606,7 @@ namespace backend.Migrations
 
                     b.HasKey("ResourceTypeId");
 
-                    b.ToTable("ResourceTypes", (string)null);
+                    b.ToTable("ResourceTypes");
 
                     b.HasData(
                         new

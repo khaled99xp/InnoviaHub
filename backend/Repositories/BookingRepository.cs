@@ -70,9 +70,21 @@ namespace backend.Repositories
         //Create new booking and save to database
         public async Task<Booking> CreateAsync(Booking booking)
         {
-            _context.Bookings.Add(booking);
-            await _context.SaveChangesAsync();
-            return booking;
+            try
+            {
+                _context.Bookings.Add(booking);
+                await _context.SaveChangesAsync();
+                return booking;
+            }
+            catch (DbUpdateException dbEx)
+            {
+                var innerException = dbEx.InnerException?.Message ?? "No inner exception";
+                throw new Exception($"Database error: {dbEx.Message}. Inner: {innerException}", dbEx);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to save booking: {ex.Message}. Type: {ex.GetType().Name}", ex);
+            }
         }
 
         //Update an existing booking
