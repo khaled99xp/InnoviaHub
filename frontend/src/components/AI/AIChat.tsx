@@ -1,5 +1,21 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Target,
+  Sun,
+  Sunset,
+  Moon,
+  Clock3,
+  Building,
+  Laptop,
+  Headphones,
+  Cpu,
+  CalendarDays,
+  HelpCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   sendChatMessage,
@@ -284,23 +300,21 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
         // Add booking helper message to chat
         const bookingHelperMessage = {
           id: (Date.now() + 2).toString(),
-          content: `🎯 **Redo att boka!**
+          content: `**Redo att boka!**
 
 Jag har hittat en lämplig resurs baserat på dina behov. Du kan slutföra bokningen direkt här.
 
 **Din bokning:**
 ${
-  extractedData.numberOfPeople
-    ? `👥 ${extractedData.numberOfPeople} personer`
-    : ""
+  extractedData.numberOfPeople ? `${extractedData.numberOfPeople} personer` : ""
 }
 ${
   extractedData.date
-    ? `📅 ${new Date(extractedData.date).toLocaleDateString("sv-SE")}`
+    ? `${new Date(extractedData.date).toLocaleDateString("sv-SE")}`
     : ""
 }
-${extractedData.timeSlot ? `🕐 ${extractedData.timeSlot}` : ""}
-${resourceType ? `📍 ${resourceType}` : ""}
+${extractedData.timeSlot ? `${extractedData.timeSlot}` : ""}
+${resourceType ? `${resourceType}` : ""}
 
 **Tillgängliga resurser:**
 Verifierar tillgänglighet...`,
@@ -656,15 +670,17 @@ Verifierar tillgänglighet...`,
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleSuggestionClick("Förmiddag")}
-                        className="px-3 py-2 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 font-medium"
+                        className="px-3 py-2 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 font-medium flex items-center gap-1"
                       >
-                        🌅 Förmiddag
+                        <Sun className="w-3 h-3" />
+                        Förmiddag
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("Eftermiddag")}
-                        className="px-3 py-2 text-xs bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200 hover:border-orange-300 font-medium"
+                        className="px-3 py-2 text-xs bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200 hover:border-orange-300 font-medium flex items-center gap-1"
                       >
-                        🌞 Eftermiddag
+                        <Sunset className="w-3 h-3" />
+                        Eftermiddag
                       </button>
                     </div>
                   </div>
@@ -682,27 +698,31 @@ Verifierar tillgänglighet...`,
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleSuggestionClick("Förmiddag")}
-                        className="px-3 py-2 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 font-medium"
+                        className="px-3 py-2 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 font-medium flex items-center gap-1"
                       >
-                        🌅 Förmiddag
+                        <Sun className="w-3 h-3" />
+                        Förmiddag
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("Eftermiddag")}
-                        className="px-3 py-2 text-xs bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200 hover:border-orange-300 font-medium"
+                        className="px-3 py-2 text-xs bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors border border-orange-200 hover:border-orange-300 font-medium flex items-center gap-1"
                       >
-                        🌞 Eftermiddag
+                        <Sunset className="w-3 h-3" />
+                        Eftermiddag
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("Kväll")}
-                        className="px-3 py-2 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors border border-purple-200 hover:border-purple-300 font-medium"
+                        className="px-3 py-2 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors border border-purple-200 hover:border-purple-300 font-medium flex items-center gap-1"
                       >
-                        🌙 Kväll
+                        <Moon className="w-3 h-3" />
+                        Kväll
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("Heldag")}
-                        className="px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 hover:border-blue-300 font-medium"
+                        className="px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 hover:border-blue-300 font-medium flex items-center gap-1"
                       >
-                        ⏰ Heldag
+                        <Clock3 className="w-3 h-3" />
+                        Heldag
                       </button>
                     </div>
                   </div>
@@ -721,27 +741,31 @@ Verifierar tillgänglighet...`,
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleSuggestionClick("Mötesrum")}
-                        className="px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 hover:border-blue-300 font-medium"
+                        className="px-3 py-2 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200 hover:border-blue-300 font-medium flex items-center gap-1"
                       >
-                        🏢 Mötesrum
+                        <Building className="w-3 h-3" />
+                        Mötesrum
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("Skrivbord")}
-                        className="px-3 py-2 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 font-medium"
+                        className="px-3 py-2 text-xs bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200 hover:border-green-300 font-medium flex items-center gap-1"
                       >
-                        💻 Skrivbord
+                        <Laptop className="w-3 h-3" />
+                        Skrivbord
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("VR Headset")}
-                        className="px-3 py-2 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors border border-purple-200 hover:border-purple-300 font-medium"
+                        className="px-3 py-2 text-xs bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors border border-purple-200 hover:border-purple-300 font-medium flex items-center gap-1"
                       >
-                        🥽 VR Headset
+                        <Headphones className="w-3 h-3" />
+                        VR Headset
                       </button>
                       <button
                         onClick={() => handleSuggestionClick("AI Server")}
-                        className="px-3 py-2 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors border border-red-200 hover:border-red-300 font-medium"
+                        className="px-3 py-2 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors border border-red-200 hover:border-red-300 font-medium flex items-center gap-1"
                       >
-                        🤖 AI Server
+                        <Cpu className="w-3 h-3" />
+                        AI Server
                       </button>
                     </div>
                   </div>
@@ -782,21 +806,24 @@ Verifierar tillgänglighet...`,
                     <div className="space-y-2">
                       <button
                         onClick={() => handleBookingAction("1")}
-                        className="w-full px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
+                        className="w-full px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium flex items-center justify-center gap-2"
                       >
-                        🎯 Slutför bokning direkt
+                        <Target className="w-4 h-4" />
+                        Slutför bokning direkt
                       </button>
                       <button
                         onClick={() => handleBookingAction("2")}
-                        className="w-full px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                        className="w-full px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center gap-2"
                       >
-                        📅 Gå till bokningssida
+                        <CalendarDays className="w-4 h-4" />
+                        Gå till bokningssida
                       </button>
                       <button
                         onClick={() => handleBookingAction("3")}
-                        className="w-full px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                        className="w-full px-4 py-2 text-sm bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium flex items-center justify-center gap-2"
                       >
-                        ❓ Behöver du hjälp med något annat?
+                        <HelpCircle className="w-4 h-4" />
+                        Behöver du hjälp med något annat?
                       </button>
                     </div>
                   </div>

@@ -88,6 +88,7 @@ namespace backend.Services
                         {
                             var availableMeetingRooms = availableResources.Where(r => r.ResourceType.Name.ToLower().Contains("meetingroom")).ToList(); // Hämta tillgängliga mötesrum
                             context += $"\n\nFor meeting rooms, you can ONLY recommend: {string.Join(", ", availableMeetingRooms.Select(r => r.Name))}"; // Lägg till mötesrum instruktion
+                            context += $"\n\nCRITICAL: When recommending meeting rooms, ALWAYS end your response with the exact format:\n**Tillgängliga resurser (verifierat):**\n- [list available resources]\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?";
                         }
                         else
                         {
@@ -98,6 +99,7 @@ namespace backend.Services
                         {
                             var availableAIServers = availableResources.Where(r => r.ResourceType.Name.ToLower().Contains("aiserver")).ToList(); // Hämta tillgängliga AI-servrar
                             context += $"\n\nFor AI Server, you can ONLY recommend: {string.Join(", ", availableAIServers.Select(r => r.Name))}"; // Lägg till AI Server instruktion
+                            context += $"\n\nCRITICAL: When recommending AI Server, ALWAYS end your response with the exact format:\n**Tillgängliga resurser (verifierat):**\n- [list available resources]\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?";
                         }
                         else
                         {
@@ -108,6 +110,7 @@ namespace backend.Services
                         {
                             var availableVRSets = availableResources.Where(r => r.ResourceType.Name.ToLower().Contains("vrset")).ToList(); // Hämta tillgänglig VR-utrustning
                             context += $"\n\nFor VR sets, you can ONLY recommend: {string.Join(", ", availableVRSets.Select(r => r.Name))}"; // Lägg till VR-utrustning instruktion
+                            context += $"\n\nCRITICAL: When recommending VR sets, ALWAYS end your response with the exact format:\n**Tillgängliga resurser (verifierat):**\n- [list available resources]\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?";
                         }
                         else
                         {
@@ -118,6 +121,7 @@ namespace backend.Services
                         {
                             var availableDesks = availableResources.Where(r => r.ResourceType.Name.ToLower().Contains("dropindesk")).ToList(); // Hämta tillgängliga skrivbord
                             context += $"\n\nFor desks, you can ONLY recommend: {string.Join(", ", availableDesks.Select(r => r.Name))}"; // Lägg till skrivbord instruktion
+                            context += $"\n\nCRITICAL: When recommending desks, ALWAYS end your response with the exact format:\n**Tillgängliga resurser (verifierat):**\n- [list available resources]\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?";
                         }
                         else
                         {
@@ -128,6 +132,7 @@ namespace backend.Services
                         {
                             var availableDesks = availableResources.Where(r => r.ResourceType.Name.ToLower().Contains("dropindesk")).ToList(); // Hämta tillgängliga skrivbord
                             context += $"\n\nFor skrivbord (desks), you can ONLY recommend: {string.Join(", ", availableDesks.Select(r => r.Name))}"; // Lägg till skrivbord instruktion på svenska
+                            context += $"\n\nCRITICAL: When recommending skrivbord (desks), ALWAYS end your response with the exact format:\n**Tillgängliga resurser (verifierat):**\n- [list available resources]\n\n**Vad vill du göra?**\n1. Slutför bokning direkt\n2. Gå till bokningssida\n3. Behöver du hjälp med något annat?";
                         }
                         else
                         {

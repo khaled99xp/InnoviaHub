@@ -26,7 +26,7 @@ export async function searchResources(
   console.log("All resources:", resources);
   console.log("Searching for type:", resourceType);
 
-  let filteredResources = resources.filter((resource) =>
+  const filteredResources = resources.filter((resource) =>
     resource.resourceTypeName
       ?.toLowerCase()
       .includes(resourceType.toLowerCase())
