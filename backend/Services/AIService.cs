@@ -547,12 +547,17 @@ namespace backend.Services
                        // Add the current user message
                        conversationHistory.Add(new { role = "user", content = message });
 
+                // Get configuration values with safe parsing
+                var model = _configuration["OpenAI:Model"];
+                var maxTokens = int.TryParse(_configuration["OpenAI:MaxTokens"], out var parsedMaxTokens) ? parsedMaxTokens : 500;
+                var temperature = double.TryParse(_configuration["OpenAI:Temperature"], out var parsedTemperature) ? parsedTemperature : 0.7;
+
                 var requestBody = new
                 {
-                    model = "gpt-3.5-turbo",
+                    model = model,
                     messages = conversationHistory.ToArray(),
-                    max_tokens = 500,
-                    temperature = 0.7
+                    max_tokens = maxTokens,
+                    temperature = temperature
                 };
 
                 var json = JsonConvert.SerializeObject(requestBody);

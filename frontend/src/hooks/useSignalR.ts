@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import toast from "react-hot-toast";
+import { SIGNALR_HUB_URL } from "../utils/constants";
 
 interface UseSignalROptions {
   token: string | null;
@@ -14,7 +15,6 @@ export const useSignalR = ({ token, onRefreshData }: UseSignalROptions) => {
   const tokenRef = useRef(token);
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const hubUrl = `http://localhost:5296/bookingHub`;
 
   // Update refs when props change
   useEffect(() => {
@@ -78,7 +78,7 @@ export const useSignalR = ({ token, onRefreshData }: UseSignalROptions) => {
     }
 
     const connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
+      .withUrl(SIGNALR_HUB_URL, {
         accessTokenFactory: () => tokenRef.current || "",
         skipNegotiation: true,
         transport: signalR.HttpTransportType.WebSockets,
@@ -172,7 +172,7 @@ export const useSignalR = ({ token, onRefreshData }: UseSignalROptions) => {
         connectionRef.current = null;
       }
     };
-  }, [hubUrl]);
+  }, [token]);
 
   return {
     connection: connectionRef.current,
