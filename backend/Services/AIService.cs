@@ -355,7 +355,8 @@ namespace backend.Services
             
             if (user != null)
             {
-                context.AppendLine($"User: {user.FirstName} {user.LastName} ({user.Email})");
+               /*  context.AppendLine($"User: {user.FirstName} {user.LastName} ({user.Email})"); */
+               context.AppendLine($"User: {user.FirstName} {user.LastName}");
                 context.AppendLine($"Role: {user.Role}");
             }
 

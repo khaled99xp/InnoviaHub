@@ -16,6 +16,7 @@ import {
   CalendarDays,
   HelpCircle,
 } from "lucide-react";
+// Ikon-komponenter från Lucide React används i UI:t för knappar och visuella ledtrådar
 import { useNavigate } from "react-router-dom";
 import {
   sendChatMessage,
@@ -27,10 +28,12 @@ import { searchResources, checkResourceAvailability } from "@/api/resourceApi";
 import { calculatePrice } from "@/api/paymentApi";
 import { UserContext } from "@/context/UserContext";
 import toast from "react-hot-toast";
+// API-klienter och kontext: anrop till AI, resurser, betalning samt användar-token
 
 interface AIChatProps {
   className?: string;
 }
+// Indata-props: möjliggör vidare styling via className
 
 export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
   const [messages, setMessages] = useState<
@@ -43,20 +46,31 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { token } = useContext(UserContext);
   const navigate = useNavigate();
+  // Lokala tillstånd:
+  // - messages: historik i chatten
+  // - inputMessage: aktuell inmatning från användaren
+  // - isLoading: spinner när AI bearbetar
+  // - suggestions: snabbsvar från servern
+  // - sessionId: kopplar ihop svar i samma AI-session
+  // - messagesEndRef: för auto-scroll till sista meddelandet
+  // - token/navigate: auth och navigering
 
   useEffect(() => {
     if (token) {
       loadSuggestions();
     }
   }, [token]);
+  // Vid inloggad användare: hämta förslag för att påskynda konversationen
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+  // När meddelanden uppdateras: scrolla ned för att alltid se senaste
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+  // Hjälpfunktion: mjuk rullning till slutet av listan
 
   const extractConversationData = (
     messages: Array<{
@@ -67,6 +81,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
     }>,
     currentMessage: string
   ) => {
+    // Extraherar bokningsdata ur konversationen (antal personer, datum, tidsfönster)
     const allMessages = [
       ...messages,
       {
@@ -81,7 +96,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
     let date: string | undefined;
     let timeSlot: string | undefined;
 
-    // Extract number of people
+    // Extrahera antal personer: letar tal följt av ord som antyder personer
     for (const msg of allMessages) {
       if (msg.isUser) {
         const content = msg.content.toLowerCase();
@@ -92,7 +107,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
         if (numberMatch) {
           numberOfPeople = parseInt(numberMatch[1]);
         } else {
-          // Also check for just numbers (in case user just says "2" or "5")
+          // Om endast ett tal anges (t.ex. "2"), tolka som antal personer
           const simpleNumberMatch = content.match(/^(\d+)$/);
           if (simpleNumberMatch) {
             numberOfPeople = parseInt(simpleNumberMatch[1]);
@@ -101,7 +116,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
       }
     }
 
-    // Extract date
+    // Extrahera datum: fångar mönster "dag + månad" och normaliserar vanliga stavfel
     for (const msg of allMessages) {
       if (msg.isUser) {
         const content = msg.content.toLowerCase();
@@ -113,7 +128,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
           const day = dateMatch[1];
           const month = dateMatch[2];
 
-          // Normalize month names (handle typos)
+          // Normalisera månadens namn (hantera vanliga stavfel)
           const normalizeMonth = (month: string) => {
             if (month.includes("novmber") || month.includes("novmber"))
               return "november";
@@ -128,7 +143,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
 
           const normalizedMonth = normalizeMonth(month);
 
-          // Convert to ISO date format (simplified)
+          // Konvertera till ISO-liknande datumformat (förenklat)
           const monthMap: { [key: string]: string } = {
             januari: "01",
             februari: "02",
@@ -152,7 +167,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
       }
     }
 
-    // Extract time slot
+    // Extrahera tidsfönster: Förmiddag/Eftermiddag baserat på nyckelord
     for (const msg of allMessages) {
       if (msg.isUser) {
         const content = msg.content.toLowerCase();
@@ -174,6 +189,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
     });
     return { numberOfPeople, date, timeSlot };
   };
+  // Returnerar extraherade värden så att resten av flödet kan använda dem
 
   const loadSuggestions = async () => {
     try {
@@ -183,6 +199,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
       console.error("Failed to load suggestions:", error);
     }
   };
+  // Hämtar snabbsvar från AI-tjänsten för att hjälpa användaren börja
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading || !token) return;
@@ -214,7 +231,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
         setSessionId(response.sessionId);
       }
 
-      // Check if this is a booking recommendation response
+      // Kontrollera om svaret innehåller tydlig rekommendation att gå vidare till bokning
       const isBookingRecommendation =
         response.response &&
         (response.response.toLowerCase().includes("rekommenderar jag") ||
@@ -225,7 +242,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
           response.response.toLowerCase().includes("slutföra din bokning") ||
           response.response.toLowerCase().includes("bokningssidan"));
 
-      // Only add AI response if it's NOT a booking recommendation
+      // Lägg bara till AI-svaret i chatten om det INTE är slutlig bokningsrekommendation
       if (!isBookingRecommendation) {
         const aiMessage = {
           id: (Date.now() + 1).toString(),
@@ -241,7 +258,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
         setSuggestions(response.suggestions);
       }
 
-      // Only show booking helper when AI has given final recommendations and is ready to proceed with booking
+      // Visa bokningshjälparen endast när AI verkar redo att gå vidare med bokning
       const isReadyForBooking = (() => {
         const lc = (response.response || "").toLowerCase();
         const hasRecommendationKw =
@@ -274,11 +291,12 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
           lc.includes("behöver du hjälp") || lc.includes("kan jag hjälpa dig");
         return positive && !negative;
       })();
+      // Heuristik: positiva signaler utan tvekan/negativa signaler => redo för nästa steg
 
       console.log("AI Response:", response.response);
       console.log("isReadyForBooking:", isReadyForBooking);
 
-      // Additional fallback detection
+      // Extra fallback: alternativa nyckelord för att inte missa bokningsläge
       const lc2 = (response.response || "").toLowerCase();
       const hasRecommendation = lc2.includes("rekommenderar jag");
       const hasBookingDirection =
@@ -297,21 +315,21 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
       console.log("hasBookingDirection:", hasBookingDirection);
       console.log("hasSlutföra:", hasSlutföra);
 
-      // Fallback detection if main logic fails
+      // Fallback om huvudlogiken inte träffar
       const fallbackReady =
         (hasRecommendation && (hasBookingDirection || hasSlutföra)) ||
         hasAvailability ||
         hasActionPrompt;
       console.log("fallbackReady:", fallbackReady);
 
-      // Add booking helper message directly to chat when AI is ready
+      // Lägg in bokningshjälpare direkt i chatten när AI är redo
       if (isReadyForBooking || fallbackReady) {
         console.log("Adding booking helper to chat!");
         // Extract conversation data
         const extractedData = extractConversationData(messages, userMessage);
         console.log("Extracted data:", extractedData);
 
-        // Detect resource type from conversation context
+        // Identifiera resurstyp från kontexten i konversationen
         let resourceType = "";
         if (
           userMessage.toLowerCase().includes("mötesrum") ||
@@ -332,7 +350,7 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
           resourceType = "vr";
         }
 
-        // Add combined booking helper message to chat
+        // Skapa en första bokningsmeddelande som snart ska berikas med verklig tillgänglighet
         const bookingHelperMessage = {
           id: (Date.now() + 2).toString(),
           content: `**Redo att boka!**
@@ -359,13 +377,13 @@ Verifierar tillgänglighet...`,
 
         setMessages((prev) => [...prev, bookingHelperMessage]);
 
-        // Enrich the chat with actually available resources for the selected date/timeslot
+        // Berika med verkligt tillgängliga resurser för valt datum/tidsfönster
         (async () => {
           try {
             const token = localStorage.getItem("token");
             if (!token) return;
 
-            // Map UI resource type to backend search type
+            // Mappa UI-resurstyp till backendens söktyp
             let searchType = "";
             if (resourceType === "mötesrum") searchType = "MeetingRoom";
             else if (resourceType === "skrivbord") searchType = "DropInDesk";
@@ -395,7 +413,7 @@ Verifierar tillgänglighet...`,
             );
             const available = checks.filter((x) => x.ok).map((x) => x.r);
 
-            // Update the existing message with the complete content
+            // Uppdatera det tidigare meddelandet med fullständig lista och handlingsval
             const completeContent = `**Redo att boka!**
 
 **Din bokning:**
@@ -449,10 +467,12 @@ ${
       setIsLoading(false);
     }
   };
+  // Skickar användarens meddelande till AI, tolkar svaret och startar bokningsflöde vid behov
 
   const handleSuggestionClick = (suggestion: string) => {
     setInputMessage(suggestion);
   };
+  // När användaren klickar på ett snabbförslag: fyll in i inmatningsfältet
 
   const handleBookingAction = (action: string) => {
     if (action === "1") {
@@ -616,13 +636,14 @@ ${
 
       searchResourcesAsync();
     } else if (action === "2") {
-      // Gå till bokningssida
+      // Gå till bokningssida (manuell bokning via UI)
       navigate("/booking");
     } else if (action === "3") {
-      // Behöver du hjälp med något annat?
+      // Fråga AI om vidare hjälp
       setInputMessage("Behöver du hjälp med något annat?");
     }
   };
+  // Hanterar användarens val i bokningshjälparen (direktbetalning, sidan, hjälp)
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -636,6 +657,7 @@ ${
       className={`flex flex-col h-full bg-white rounded-lg shadow-lg ${className}`}
     >
       {/* Chat Header */}
+      {/* Huvud: visar AI-ikon, namn och beskrivning */}
       <div className="flex items-center gap-3 p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <div className="flex items-center justify-center w-10 h-10 bg-blue-500 rounded-full">
           <Bot className="w-6 h-6 text-white" />
@@ -649,6 +671,7 @@ ${
       </div>
 
       {/* Messages Container */}
+      {/* Behållare: lista över alla chattmeddelanden och tomt-tillstånd */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
@@ -706,9 +729,11 @@ ${
             </div>
 
             {/* Show interactive buttons after AI messages */}
+            {/* Efter AI-svar: visa kontextuella knappar om aktuellt */}
             {!message.isUser && index === messages.length - 1 && (
               <div className="mt-2 ml-11">
                 {/* Time Slot Options - Only show when asking about time */}
+                {/* Val av tidsfönster: visas när AI frågar om tidpunkt */}
                 {message.content
                   .toLowerCase()
                   .includes("vilken tid föredrar du") ||
@@ -737,6 +762,7 @@ ${
                 ) : null}
 
                 {/* Extended Time Options - Only show when asking about all time options */}
+                {/* Utökade tidsalternativ: morgon/eftermiddag/kväll/heldag */}
                 {message.content
                   .toLowerCase()
                   .includes("förmiddag, eftermiddag, kväll eller heldag") ||
@@ -779,6 +805,7 @@ ${
                 ) : null}
 
                 {/* Resource Type Options - Only show when asking about resource type */}
+                {/* Val av resurstyp: mötesrum/skrivbord/VR/AI-server */}
                 {message.content
                   .toLowerCase()
                   .includes("vilken typ av resurs") ||
@@ -822,6 +849,7 @@ ${
                 ) : null}
 
                 {/* Number of People Options - Only show when asking about number of people */}
+                {/* Val av antal personer: snabbknappar 1–12 */}
                 {message.content.toLowerCase().includes("hur många personer") ||
                 message.content.toLowerCase().includes("antal personer") ||
                 message.content.toLowerCase().includes("personer planerar") ||
@@ -848,6 +876,7 @@ ${
                 ) : null}
 
                 {/* Booking Action Options - Only show when booking helper is displayed */}
+                {/* Åtgärder för bokning: direkt bokning, gå till sida eller be om hjälp */}
                 {message.content.includes("**Vad vill du göra?**") ? (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-2">
@@ -898,11 +927,13 @@ ${
             </div>
           </div>
         )}
+        {/* Laddningsindikator: visar när AI bearbetar en fråga */}
 
         <div ref={messagesEndRef} />
       </div>
 
       {/* Suggestions */}
+      {/* Snabbförslag: klickbara för att snabbt fylla in frågor/svar */}
       {suggestions.length > 0 && (
         <div className="p-4 border-t border-gray-200">
           <p className="text-sm text-gray-600 mb-2">Snabbförslag:</p>
@@ -921,6 +952,7 @@ ${
       )}
 
       {/* Input Area */}
+      {/* Inmatningsfält: skriv meddelande och skicka till AI */}
       <div className="p-4 border-t border-gray-200">
         <div className="flex gap-2">
           <input
