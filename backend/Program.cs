@@ -136,16 +136,16 @@ if (app.Environment.IsDevelopment())
 
 
 //Seed default roles and users
-//if (!app.Environment.IsEnvironment("CI"))
-//{
-//    using (var scope = app.Services.CreateScope())
-//    {
-//        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-//        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-//
-//        await DbSeeder.SeedRolesAndUsersAsync(roleManager, userManager);
-//    }
-//}
+if (!app.Environment.IsEnvironment("CI"))
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        await DbSeeder.SeedRolesAndUsersAsync(roleManager, userManager);
+    }
+}
 
 
 // Add middleware
