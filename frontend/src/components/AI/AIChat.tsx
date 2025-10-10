@@ -242,36 +242,56 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
       }
 
       // Only show booking helper when AI has given final recommendations and is ready to proceed with booking
-      const isReadyForBooking =
-        response.response &&
-        (response.response.toLowerCase().includes("rekommenderar jag") ||
-          response.response.toLowerCase().includes("passar bäst för dig") ||
-          response.response.toLowerCase().includes("gå till bokningssidan") ||
-          response.response
-            .toLowerCase()
-            .includes("du kan gå till bokningssidan") ||
-          response.response.toLowerCase().includes("slutföra din bokning") ||
-          response.response.toLowerCase().includes("bokningssidan") ||
-          response.response
-            .toLowerCase()
-            .includes("kan gå till bokningssidan") ||
-          response.response
-            .toLowerCase()
-            .includes("för att slutföra din bokning")) &&
-        !response.response.toLowerCase().includes("behöver du hjälp") &&
-        !response.response.toLowerCase().includes("kan jag hjälpa dig");
+      const isReadyForBooking = (() => {
+        const lc = (response.response || "").toLowerCase();
+        const hasRecommendationKw =
+          lc.includes("rekommenderar jag") ||
+          lc.includes("passar bäst för dig");
+        const hasGoToBooking =
+          lc.includes("bokningssida") || lc.includes("bokningssidan");
+        const hasSlutfor =
+          lc.includes("slutför") ||
+          lc.includes("slutföra") ||
+          lc.includes("slutfora");
+        const hasAvailability =
+          lc.includes("tillgängliga resurser") ||
+          lc.includes("tillgangliga resurser");
+        const hasActionPrompt =
+          lc.includes("vad vill du göra") || lc.includes("vad vill du gora");
+        const hasFinishPhrase =
+          lc.includes("för att slutföra din bokning") ||
+          lc.includes("for att slutföra din bokning") ||
+          lc.includes("for att slutfora din bokning");
+
+        const positive =
+          hasRecommendationKw ||
+          hasGoToBooking ||
+          hasSlutfor ||
+          hasFinishPhrase ||
+          hasAvailability ||
+          hasActionPrompt;
+        const negative =
+          lc.includes("behöver du hjälp") || lc.includes("kan jag hjälpa dig");
+        return positive && !negative;
+      })();
 
       console.log("AI Response:", response.response);
       console.log("isReadyForBooking:", isReadyForBooking);
 
       // Additional fallback detection
-      const hasRecommendation = response.response
-        .toLowerCase()
-        .includes("rekommenderar jag");
-      const hasBookingDirection = response.response
-        .toLowerCase()
-        .includes("bokningssidan");
-      const hasSlutföra = response.response.toLowerCase().includes("slutföra");
+      const lc2 = (response.response || "").toLowerCase();
+      const hasRecommendation = lc2.includes("rekommenderar jag");
+      const hasBookingDirection =
+        lc2.includes("bokningssida") || lc2.includes("bokningssidan");
+      const hasSlutföra =
+        lc2.includes("slutför") ||
+        lc2.includes("slutföra") ||
+        lc2.includes("slutfora");
+      const hasAvailability =
+        lc2.includes("tillgängliga resurser") ||
+        lc2.includes("tillgangliga resurser");
+      const hasActionPrompt =
+        lc2.includes("vad vill du göra") || lc2.includes("vad vill du gora");
 
       console.log("hasRecommendation:", hasRecommendation);
       console.log("hasBookingDirection:", hasBookingDirection);
@@ -279,7 +299,9 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
 
       // Fallback detection if main logic fails
       const fallbackReady =
-        hasRecommendation && (hasBookingDirection || hasSlutföra);
+        (hasRecommendation && (hasBookingDirection || hasSlutföra)) ||
+        hasAvailability ||
+        hasActionPrompt;
       console.log("fallbackReady:", fallbackReady);
 
       // Add booking helper message directly to chat when AI is ready
