@@ -14,17 +14,20 @@ namespace backend.Services
         private readonly HttpClient _httpClient; // HTTP-klient för OpenAI API-anrop
         private readonly IConfiguration _configuration; // Konfiguration för API-nycklar
         private readonly ILogger<AIService> _logger; // Logger för att spåra aktivitet och fel
+        private readonly IPromptService _promptService; // Service för att hantera prompts
 
         public AIService(
             ApplicationDbContext context,
             HttpClient httpClient,
             IConfiguration configuration,
-            ILogger<AIService> logger)
+            ILogger<AIService> logger,
+            IPromptService promptService)
         {
             _context = context; // Tilldela databas kontext
             _httpClient = httpClient; // Tilldela HTTP-klient
             _configuration = configuration; // Tilldela konfiguration
             _logger = logger; // Tilldela logger
+            _promptService = promptService; // Tilldela prompt service
         }
 
         public async Task<ChatResponseDto> ProcessChatMessageAsync(string userId, ChatRequestDto request)
@@ -402,44 +405,22 @@ namespace backend.Services
                     return "AI service is not configured. Please contact administrator.";
                 }
 
-                       var systemPrompt = @"
-                       Du är en AI-assistent för InnoviaHub, en plattform för resursbokning. 
-                       Hjälp användare att hitta och boka resurser som mötesrum, skrivbord och utrustning.
-                       
-                       KRITISKA INSTRUKTIONER:
-                       1. BEHÅLL SAMTALSKONTEXT - referera till tidigare meddelanden och sammanhang
-                       2. FRÅGA INTE om information som användaren redan har gett
-                       3. När användare vill boka mötesrum, samla ALLA detaljer först:
-                          - Antal personer
-                          - Datum
-                          - Tid (förmiddag, eftermiddag, eller specifik tid)
-                          - Speciella behov
-                       4. FÖR MÖTESRUM: Rekommendera baserat på antal personer:
-                          - 1-4 personer: Mötesrum 1 eller 2
-                          - 5-8 personer: Mötesrum 3 eller 4
-                          - 9+ personer: Mötesrum 4
-                       5. När du har ALLA detaljer, ge SPECIFIKA rekommendationer och dirigera till bokningssidan
-                       6. FÖR BOKNINGSHISTORIK: Använd data från User Context direkt, fråga INTE om autentisering
-                       7. Avsluta alltid med: 'Kan jag hjälpa dig med något annat?'
-                       8. När användaren säger bara 'Mötesrum', fråga om antal personer först
-                       9. När användaren säger antal personer, fråga om datum
-                       10. När användaren säger datum, fråga om tid enkelt: 'Vilken tid föredrar du? Förmiddag eller eftermiddag?'
-                       11. När användaren säger tid, ge SPECIFIKA rekommendationer مثل 'För 10 personer rekommenderar jag Mötesrum 4' och dirigera till bokningssidan
-                       16. När du ger rekommendationer, använd EXAKT samma antal personer som användaren angav
-                       12. NÄR DU HAR ALLA DETALJER: Ge specifika rekommendationer och dirigera till bokningssidan
-                       13. När du ger rekommendationer, avsluta med 'Du kan gå till bokningssidan för att slutföra din bokning' OCH fråga 'Behöver du hjälp med något annat?'
-                       14. ALDRIG ge rekommendationer innan du har frågat om tid
-                       15. ALDRIG fråga om tid EFTER att du har gett rekommendationer
-                       13. ALDRIG ändra antal personer som användaren har angivit
-                       14. ALDRIG fråga om samma information två gånger
-                       15. BEHÅLL exakt samma antal personer genom hela samtalet
-                       
-                       EXEMPEL: Om användaren säger 'mötesrum för 10 personer' och sedan 'datum 10 nästa månad, förmiddag', 
-                       fråga INTE om antal personer igen - använd informationen de redan har gett.
-                       
-                       Var hjälpsam, vänlig och ge specifika rekommendationer baserat på deras behov.
-                       Om du behöver mer information, ställ förtydligande frågor.
-                       ";
+                // Check if the message is related to the platform
+                _logger.LogInformation("=== AI SERVICE DEBUG ===");
+                _logger.LogInformation("Checking message: '{Message}'", message);
+                
+                var isPlatformRelated = _promptService.IsPlatformRelatedMessage(message);
+                _logger.LogInformation("Is platform related: {IsPlatformRelated}", isPlatformRelated);
+                
+                if (!isPlatformRelated)
+                {
+                    _logger.LogInformation("Message is not platform related, returning non-platform response");
+                    return _promptService.GetNonPlatformResponse();
+                }
+                
+                _logger.LogInformation("Message is platform related, proceeding with AI processing");
+
+                       var systemPrompt = _promptService.GetSystemPrompt();
 
                        // Note: Conversation history will be handled in the calling method
 
@@ -842,5 +823,6 @@ namespace backend.Services
                 _logger.LogError(ex, "Error generating trend insight");
             }
         }
+
     }
 }

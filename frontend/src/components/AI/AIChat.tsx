@@ -231,27 +231,14 @@ export const AIChat: React.FC<AIChatProps> = ({ className = "" }) => {
         setSessionId(response.sessionId);
       }
 
-      // Kontrollera om svaret innehåller tydlig rekommendation att gå vidare till bokning
-      const isBookingRecommendation =
-        response.response &&
-        (response.response.toLowerCase().includes("rekommenderar jag") ||
-          response.response.toLowerCase().includes("gå till bokningssidan") ||
-          response.response
-            .toLowerCase()
-            .includes("du kan gå till bokningssidan") ||
-          response.response.toLowerCase().includes("slutföra din bokning") ||
-          response.response.toLowerCase().includes("bokningssidan"));
-
-      // Lägg bara till AI-svaret i chatten om det INTE är slutlig bokningsrekommendation
-      if (!isBookingRecommendation) {
-        const aiMessage = {
-          id: (Date.now() + 1).toString(),
-          content: response.response,
-          isUser: false,
-          timestamp: new Date(response.timestamp),
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-      }
+      // Add AI response to chat first
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        content: response.response,
+        isUser: false,
+        timestamp: new Date(response.timestamp),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
 
       // Update suggestions if provided
       if (response.suggestions && response.suggestions.length > 0) {
@@ -375,7 +362,13 @@ Verifierar tillgänglighet...`,
           timestamp: new Date(),
         };
 
-        setMessages((prev) => [...prev, bookingHelperMessage]);
+        // Replace the AI message with booking helper message
+        setMessages((prev) => {
+          const filteredMessages = prev.filter(
+            (msg) => msg.id !== aiMessage.id
+          );
+          return [...filteredMessages, bookingHelperMessage];
+        });
 
         // Berika med verkligt tillgängliga resurser för valt datum/tidsfönster
         (async () => {

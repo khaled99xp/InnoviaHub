@@ -16,10 +16,12 @@ Detta projekt är ett avancerat bokningssystem för ett coworkingcenter med AI-i
 
 ## Nya funktioner (AI-integration)
 
-- **AI Chat**: Intelligenta rekommendationer för bokningar
+- **AI Chat**: Intelligenta rekommendationer för bokningar med kontextuell förståelse
 - **Smart Booking Helper**: AI-assistent som hjälper användare att välja rätt resurs
 - **AI Insights**: Avancerad analys av bokningsmönster för administratörer
 - **Intelligent Resource Recommendations**: AI-förslag baserat på användarens behov
+- **Context-Aware AI**: AI som förstår plattformens syfte och filtrerar irrelevanta frågor
+- **Dynamic Prompt Management**: Konfigurerbara AI-prompts utan omstart av applikationen
 
 ## Annat
 
@@ -50,6 +52,8 @@ Detta projekt är ett avancerat bokningssystem för ett coworkingcenter med AI-i
 
 - Lägg till din OpenAI API-nyckel i "appsettings.json" under "OpenAI.ApiKey"
 - AI-funktionalitet är valfri - systemet fungerar även utan OpenAI-nyckel
+- **AI Prompts**: Konfigurera AI-beteende genom att redigera `backend/Config/AIPrompts.json`
+- **Smart Filtering**: AI filtrerar automatiskt irrelevanta frågor och fokuserar på bokningsrelaterade ämnen
 
 ## Starta applikationen
 
@@ -69,18 +73,24 @@ npm run dev
 ## Användare
 
 För att boka måste du logga in. <br />
-Du kan skapa en ny användare eller logga in med admin kontot. <br />
+Du kan skapa en ny användare eller med hjälp av standarduppgifterna. <br />
 Admins kan använda admin tools genom att gå in på [http://localhost:5173/admin](http://localhost:5173/admin) <br />
 
 **Admin konto:** <br />
 **E-post: admin@innoviahub.com**, <br />
 **Lösenord: Admin123!**
 
+**Members konto:** <br />
+**E-post: member@innoviahub.com**, <br />
+**Lösenord: Member123!**
+
 ## AI-funktioner
 
 - **AI Chat**: [http://localhost:5173/ai-chat](http://localhost:5173/ai-chat) - Chat med AI för bokningshjälp
 - **AI Insights**: [http://localhost:5173/admin/ai-insights](http://localhost:5173/admin/ai-insights) - AI-analys för administratörer
 - **Smart Booking**: AI-rekommendationer när du skapar bokningar
+- **Context-Aware Responses**: AI förstår plattformens syfte och svarar endast på bokningsrelaterade frågor
+- **Dynamic Prompt Configuration**: Anpassa AI-beteende genom konfigurationsfiler
 
 # Endpoints
 
@@ -264,9 +274,10 @@ Tar bort resurs.
 **/api/ai/chat** <br />
 Autentisering: Member <br />
 Body: <br />
-string Message
+string Message, <br />
+string SessionId (valfritt)
 
-Skickar meddelande till AI-chatten och får intelligenta svar om bokningar.
+Skickar meddelande till AI-chatten och får intelligenta svar om bokningar. AI filtrerar automatiskt irrelevanta frågor och fokuserar på bokningsrelaterade ämnen.
 
 **GET**
 **/api/ai/insights** <br />
@@ -326,6 +337,9 @@ Returnerar användarens betalningshistorik.
 - **Smart Recommendations**: Personliga förslag baserat på användarens historik
 - **Predictive Analytics**: AI-analys av bokningsmönster för bättre planering
 - **Natural Language Processing**: Chat med AI på naturligt språk
+- **Context-Aware Filtering**: AI förstår plattformens syfte och filtrerar irrelevanta frågor
+- **Dynamic Prompt Management**: Konfigurerbara AI-prompts för anpassade beteenden
+- **Smart Response System**: AI svarar endast på bokningsrelaterade frågor med relevanta förslag
 
 ## Administrativa verktyg
 
@@ -334,9 +348,32 @@ Returnerar användarens betalningshistorik.
 - **Resource Optimization**: AI-förslag för resursförbättringar
 - **Automated Reports**: Automatiska rapporter med AI-insikter
 
+## AI Prompt Management
+
+### Konfigurera AI-beteende
+
+AI-systemet använder konfigurerbara prompts för att säkerställa relevanta svar. Redigera `backend/Config/AIPrompts.json` för att anpassa AI-beteendet:
+
+```json
+{
+  "SystemPrompt": "Du är en AI-assistent för InnoviaHub...",
+  "NonPlatformResponse": "Jag beklagar, jag är en assistent specialiserad...",
+  "PlatformKeywords": ["boka", "resurs", "mötesrum", "skrivbord"],
+  "NonPlatformKeywords": ["hungrig", "mat", "väder", "sport"]
+}
+```
+
+### Funktioner
+
+- **Smart Filtering**: AI filtrerar automatiskt irrelevanta frågor
+- **Context Awareness**: Förstår plattformens syfte och fokuserar på bokningar
+- **Dynamic Configuration**: Ändra AI-beteende utan omstart av applikationen
+- **Keyword Management**: Konfigurera vilka ord som ska filtreras eller tillåtas
+
 ## Säkerhet och prestanda
 
 - **JWT Authentication**: Säker autentisering med token-baserad säkerhet
 - **Role-based Access Control**: Olika behörigheter för användare och administratörer
 - **Database Optimization**: Optimerad databasstruktur för snabba svar
 - **Error Handling**: Robust felhantering med detaljerade felmeddelanden
+- **AI Security**: Säker AI-integration med konfigurerbara säkerhetsinställningar
