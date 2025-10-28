@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
-import toast from "react-hot-toast";
 import { SIGNALR_HUB_URL } from "../utils/constants";
 
 interface UseSignalROptions {
@@ -105,7 +104,6 @@ export const useSignalR = ({ token, onRefreshData }: UseSignalROptions) => {
           await connection.start();
           console.log("SignalR connected");
           setIsConnected(true);
-          toast.success("Real-time connection established");
 
           connection.on("BookingCreated", () => onRefreshDataRef.current());
           connection.on("BookingUpdated", () => onRefreshDataRef.current());
@@ -125,7 +123,6 @@ export const useSignalR = ({ token, onRefreshData }: UseSignalROptions) => {
     // Add connection state change handlers
     connection.onclose((error) => {
       setIsConnected(false);
-      toast.error("Real-time connection lost");
       if (error) {
         console.log("SignalR connection closed due to error:", error);
       } else {
@@ -140,7 +137,6 @@ export const useSignalR = ({ token, onRefreshData }: UseSignalROptions) => {
 
     connection.onreconnected((connectionId) => {
       setIsConnected(true);
-      toast.success("Real-time connection restored");
       console.log("SignalR reconnected with connection ID:", connectionId);
     });
 

@@ -133,7 +133,9 @@ const RulesManagement: React.FC = () => {
         Threshold: ruleForm.threshold,
         CooldownSeconds: 300,
         Enabled: ruleForm.isActive,
-        Message: ruleForm.message || `${ruleForm.type} ${ruleForm.operator} ${ruleForm.threshold}`,
+        Message:
+          ruleForm.message ||
+          `${ruleForm.type} ${ruleForm.operator} ${ruleForm.threshold}`,
       };
 
       const response = await fetch("http://localhost:5105/rules", {
@@ -169,7 +171,9 @@ const RulesManagement: React.FC = () => {
         Threshold: ruleForm.threshold,
         CooldownSeconds: 300,
         Enabled: ruleForm.isActive,
-        Message: ruleForm.message || `${ruleForm.type} ${ruleForm.operator} ${ruleForm.threshold}`,
+        Message:
+          ruleForm.message ||
+          `${ruleForm.type} ${ruleForm.operator} ${ruleForm.threshold}`,
       };
 
       const response = await fetch(
@@ -260,7 +264,8 @@ const RulesManagement: React.FC = () => {
       operator: rule.operator,
       threshold: rule.threshold,
       severity: "warning", // Default severity since Rules.Engine doesn't store this
-      message: rule.message || `${rule.type} ${rule.operator} ${rule.threshold}`,
+      message:
+        rule.message || `${rule.type} ${rule.operator} ${rule.threshold}`,
       isActive: rule.enabled,
     });
     setEditingRule(rule);
@@ -296,181 +301,174 @@ const RulesManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Rules & Alerts Management
-              </h1>
-              <p className="mt-2 text-gray-600">
-                Manage IoT sensor rules and monitor alerts
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAddRule(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Add Rule</span>
-            </button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            Rules Management
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            Create and manage IoT device rules and alerts
+          </p>
         </div>
+        <button
+          onClick={() => setShowAddRule(true)}
+          className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Rule</span>
+        </button>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center">
-              <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
-              <p className="text-red-700">{error}</p>
-              <button
-                onClick={() => setError(null)}
-                className="ml-auto text-red-400 hover:text-red-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="bg-red-50 border-l-4 border-red-400 p-3 sm:p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-400 mr-2 flex-shrink-0" />
+            <p className="text-red-700 text-sm sm:text-base flex-1">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-400 hover:text-red-600 p-1"
+            >
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Rules Section */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <Settings className="w-5 h-5 mr-2" />
-                Rules ({rules.length})
-              </h2>
-            </div>
-            <div className="p-6">
-              {rules.length === 0 ? (
-                <div className="text-center py-8">
-                  <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No rules configured</p>
-                  <button
-                    onClick={() => setShowAddRule(true)}
-                    className="mt-4 text-blue-600 hover:text-blue-700"
-                  >
-                    Create your first rule
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {rules.map((rule) => (
-                    <div
-                      key={rule.id}
-                      className="border border-gray-200 rounded-lg p-4"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">
-                            {rule.message || `${rule.type} ${rule.operator} ${rule.threshold}`}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {getDeviceName(rule.deviceId)}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-1">
-                            {rule.type} {rule.operator} {rule.threshold}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            Rule
-                          </span>
-                          <button
-                            onClick={() =>
-                              toggleRuleStatus(rule.id, rule.enabled)
-                            }
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              rule.enabled
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {rule.enabled ? "Active" : "Inactive"}
-                          </button>
-                          <button
-                            onClick={() => openEditRule(rule)}
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteRule(rule.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Rules Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              Rules ({rules.length})
+            </h2>
           </div>
-
-          {/* Alerts Section */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2" />
-                Recent Alerts ({alerts.length})
-              </h2>
-            </div>
-            <div className="p-6">
-              {alerts.length === 0 ? (
-                <div className="text-center py-8">
-                  <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No alerts triggered</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {alerts.slice(0, 10).map((alert) => (
-                    <div
-                      key={alert.id}
-                      className="border-l-4 border-red-400 bg-red-50 p-4 rounded"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-medium text-red-900">
-                            {getDeviceName(alert.deviceId)}
-                          </h3>
-                          <p className="text-sm text-red-700">
-                            {alert.message}
-                          </p>
-                          <p className="text-xs text-red-600 mt-1">
-                            Value: {alert.value} |{" "}
-                            {new Date(alert.time).toLocaleString()}
-                          </p>
-                        </div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(
-                            alert.severity
-                          )}`}
-                        >
-                          {alert.severity}
+          <div className="p-4 sm:p-6">
+            {rules.length === 0 ? (
+              <div className="text-center py-8">
+                <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No rules configured</p>
+                <button
+                  onClick={() => setShowAddRule(true)}
+                  className="mt-4 text-blue-600 hover:text-blue-700"
+                >
+                  Create your first rule
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rules.map((rule) => (
+                  <div
+                    key={rule.id}
+                    className="border border-gray-200 rounded-lg p-3 sm:p-4"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900 truncate">
+                          {rule.message ||
+                            `${rule.type} ${rule.operator} ${rule.threshold}`}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                          {getDeviceName(rule.deviceId)}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                          {rule.type} {rule.operator} {rule.threshold}
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-1 ml-2">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Rule
                         </span>
+                        <button
+                          onClick={() =>
+                            toggleRuleStatus(rule.id, rule.enabled)
+                          }
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            rule.enabled
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {rule.enabled ? "Active" : "Inactive"}
+                        </button>
+                        <button
+                          onClick={() => openEditRule(rule)}
+                          className="text-blue-600 hover:text-blue-700 p-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteRule(rule.id)}
+                          className="text-red-600 hover:text-red-700 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Alerts Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              Recent Alerts ({alerts.length})
+            </h2>
+          </div>
+          <div className="p-4 sm:p-6">
+            {alerts.length === 0 ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No alerts triggered</p>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {alerts.slice(0, 10).map((alert) => (
+                  <div
+                    key={alert.id}
+                    className="border-l-4 border-red-400 bg-red-50 p-3 sm:p-4 rounded"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm sm:text-base font-medium text-red-900 truncate">
+                          {getDeviceName(alert.deviceId)}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-red-700 mt-1">
+                          {alert.message}
+                        </p>
+                        <p className="text-xs text-red-600 mt-1">
+                          Value: {alert.value} |{" "}
+                          {new Date(alert.time).toLocaleString()}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${getSeverityColor(
+                          alert.severity
+                        )}`}
+                      >
+                        {alert.severity}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Add/Edit Rule Modal */}
       {(showAddRule || editingRule) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">
                 {editingRule ? "Edit Rule" : "Add New Rule"}
@@ -489,7 +487,7 @@ const RulesManagement: React.FC = () => {
 
             <form
               onSubmit={editingRule ? updateRule : createRule}
-              className="space-y-4"
+              className="space-y-3 sm:space-y-4"
             >
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -500,7 +498,7 @@ const RulesManagement: React.FC = () => {
                   onChange={(e) =>
                     setRuleForm({ ...ruleForm, deviceId: e.target.value })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
                   <option value="">Select a device</option>
@@ -521,7 +519,7 @@ const RulesManagement: React.FC = () => {
                   onChange={(e) =>
                     setRuleForm({ ...ruleForm, type: e.target.value })
                   }
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="temperature">Temperature</option>
                   <option value="co2">CO₂</option>
@@ -531,7 +529,7 @@ const RulesManagement: React.FC = () => {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Operator
@@ -599,7 +597,7 @@ const RulesManagement: React.FC = () => {
                     setRuleForm({ ...ruleForm, message: e.target.value })
                   }
                   placeholder="e.g., Temperature too high"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -622,7 +620,7 @@ const RulesManagement: React.FC = () => {
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-2 pt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -630,13 +628,13 @@ const RulesManagement: React.FC = () => {
                     setEditingRule(null);
                     resetForm();
                   }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                 >
                   <Save className="w-4 h-4" />
                   <span>{editingRule ? "Update" : "Create"} Rule</span>

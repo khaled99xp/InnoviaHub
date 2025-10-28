@@ -52,7 +52,9 @@ const IoTDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
-  const [selectedMeasurementType, setSelectedMeasurementType] = useState<string | null>(null);
+  const [selectedMeasurementType, setSelectedMeasurementType] = useState<
+    string | null
+  >(null);
 
   // Fetch historical measurements for a device
   const fetchDeviceHistory = async (deviceId: string) => {
@@ -64,7 +66,7 @@ const IoTDashboard: React.FC = () => {
         return {};
       }
       const measurements: Measurement[] = await response.json();
-      
+
       // Group measurements by type
       const groupedMeasurements: { [key: string]: Measurement[] } = {};
       measurements.forEach((measurement) => {
@@ -73,7 +75,7 @@ const IoTDashboard: React.FC = () => {
         }
         groupedMeasurements[measurement.type].push(measurement);
       });
-      
+
       return groupedMeasurements;
     } catch (err) {
       console.error(`Failed to fetch history for device ${deviceId}:`, err);
@@ -147,20 +149,21 @@ const IoTDashboard: React.FC = () => {
                 if (!updatedHistory[measurement.type]) {
                   updatedHistory[measurement.type] = [];
                 }
-                
+
                 // Check if this measurement already exists (same time, value, and device)
                 const existingHistory = updatedHistory[measurement.type];
-                const isDuplicate = existingHistory.some(m => 
-                  m.time === measurement.time && 
-                  m.value === measurement.value &&
-                  m.deviceId === measurement.deviceId
+                const isDuplicate = existingHistory.some(
+                  (m) =>
+                    m.time === measurement.time &&
+                    m.value === measurement.value &&
+                    m.deviceId === measurement.deviceId
                 );
-                
+
                 // Only add if not duplicate
                 if (!isDuplicate) {
                   updatedHistory[measurement.type] = [
                     measurement,
-                    ...existingHistory.slice(0, 9)
+                    ...existingHistory.slice(0, 9),
                   ];
                 }
 
@@ -279,63 +282,66 @@ const IoTDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                IoT Dashboard
-              </h1>
-              <p className="mt-2 text-gray-600">Real-time sensor monitoring</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            IoT Dashboard
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            Monitor and manage IoT devices in real-time
+          </p>
+        </div>
+
+        {/* Connection Status */}
+        <div className="flex items-center space-x-2">
+          {isConnected ? (
+            <div className="flex items-center space-x-2 text-green-600">
+              <Wifi className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base font-medium">
+                Connected
+              </span>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                {isConnected ? (
-                  <Wifi className="w-5 h-5 text-green-500" />
-                ) : (
-                  <WifiOff className="w-5 h-5 text-red-500" />
-                )}
-                <span
-                  className={`text-sm font-medium ${
-                    isConnected ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {isConnected ? "Connected" : "Disconnected"}
-                </span>
-              </div>
-              <div className="text-sm text-gray-500">
-                {devices.length} devices
-              </div>
+          ) : (
+            <div className="flex items-center space-x-2 text-red-600">
+              <WifiOff className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base font-medium">
+                Disconnected
+              </span>
             </div>
-          </div>
+          )}
+          <span className="text-xs sm:text-sm text-gray-500">
+            {devices.length} devices
+          </span>
         </div>
       </div>
 
-      {/* Alerts Section */}
+      {/* Alerts */}
       {alerts.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center">
-              <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Active Alerts ({alerts.length})
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  {alerts.slice(0, 3).map((alert, index) => (
-                    <div key={index} className="mb-1">
-                      {alert.message} -{" "}
-                      {new Date(alert.time).toLocaleTimeString()}
-                    </div>
-                  ))}
-                  {alerts.length > 3 && (
-                    <div className="text-xs text-red-600">
-                      +{alerts.length - 3} more alerts
-                    </div>
-                  )}
-                </div>
+        <div className="bg-red-50 border-l-4 border-red-400 p-3 sm:p-4">
+          <div className="flex items-start">
+            <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm sm:text-base font-medium text-red-800">
+                Active Alerts ({alerts.length})
+              </h3>
+              <div className="mt-2 space-y-2">
+                {alerts.slice(0, 3).map((alert, index) => (
+                  <div
+                    key={index}
+                    className="text-xs sm:text-sm text-red-700 bg-red-100 p-2 rounded"
+                  >
+                    <strong>{alert.message}</strong> - Device: {alert.deviceId}{" "}
+                    ({alert.value.toFixed(1)}
+                    {alert.type === "temperature" ? "°C" : "ppm"})
+                  </div>
+                ))}
+                {alerts.length > 3 && (
+                  <div className="text-xs sm:text-sm text-red-600">
+                    +{alerts.length - 3} more alerts
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -343,128 +349,125 @@ const IoTDashboard: React.FC = () => {
       )}
 
       {/* Devices Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {devices.map((deviceData) => (
-            <div
-              key={deviceData.device.id}
-              className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow"
-            >
-              {/* Device Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {deviceData.device.serial}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {deviceData.device.model}
-                  </p>
-                </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        {devices.map((deviceData) => (
+          <div
+            key={deviceData.device.id}
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow"
+          >
+            {/* Device Header */}
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                  {deviceData.device.serial}
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 truncate">
+                  {deviceData.device.model}
+                </p>
+              </div>
+              <div
+                className={`flex items-center space-x-1 ml-2 ${getStatusColor(
+                  deviceData.isOnline
+                )}`}
+              >
                 <div
-                  className={`flex items-center space-x-1 ${getStatusColor(
-                    deviceData.isOnline
-                  )}`}
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full ${
-                      deviceData.isOnline ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  ></div>
-                  <span className="text-xs font-medium">
-                    {deviceData.isOnline ? "Online" : "Offline"}
-                  </span>
-                </div>
+                  className={`w-2 h-2 rounded-full ${
+                    deviceData.isOnline ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></div>
+                <span className="text-xs font-medium">
+                  {deviceData.isOnline ? "Online" : "Offline"}
+                </span>
               </div>
+            </div>
 
-              {/* Measurements */}
-              <div className="space-y-3">
-                {Object.entries(deviceData.latestMeasurements).map(
-                  ([type, measurement]) => (
-                    <div
-                      key={type}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center space-x-2">
-                        {getMeasurementIcon(type)}
-                        <span className="text-sm font-medium text-gray-700 capitalize">
-                          {type === "co2" ? "CO₂" : type}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span
-                          className={`text-lg font-bold ${getMeasurementColor(
-                            type,
-                            measurement.value
-                          )}`}
-                        >
-                          {measurement.value.toFixed(1)}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-1">
-                          {type === "temperature"
-                            ? "°C"
-                            : type === "co2"
-                            ? "ppm"
-                            : ""}
-                        </span>
-                      </div>
+            {/* Measurements */}
+            <div className="space-y-2 mb-3">
+              {Object.entries(deviceData.latestMeasurements).map(
+                ([type, measurement]) => (
+                  <div key={type} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {getMeasurementIcon(type)}
+                      <span className="text-xs sm:text-sm text-gray-600 capitalize">
+                        {type === "co2" ? "CO₂" : type}
+                      </span>
                     </div>
-                  )
-                )}
-
-                {Object.keys(deviceData.latestMeasurements).length === 0 && (
-                  <div className="text-center py-4">
-                    <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No data available</p>
+                    <div className="text-right">
+                      <span
+                        className={`text-sm sm:text-base font-bold ${getMeasurementColor(
+                          type,
+                          measurement.value
+                        )}`}
+                      >
+                        {measurement.value.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-gray-500 ml-1">
+                        {type === "temperature"
+                          ? "°C"
+                          : type === "co2"
+                          ? "ppm"
+                          : ""}
+                      </span>
+                    </div>
                   </div>
-                )}
+                )
+              )}
 
-                {/* History Button */}
-                {Object.keys(deviceData.latestMeasurements).length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <button
-                      onClick={() => {
-                        setSelectedDevice(deviceData.device.id);
-                        setSelectedMeasurementType(Object.keys(deviceData.latestMeasurements)[0]);
-                      }}
-                      className="w-full text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      View History (Last 10)
-                    </button>
-                  </div>
-                )}
-              </div>
+              {Object.keys(deviceData.latestMeasurements).length === 0 && (
+                <div className="text-center py-4">
+                  <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No data available</p>
+                </div>
+              )}
 
-              {/* Last Update */}
+              {/* History Button */}
               {Object.keys(deviceData.latestMeasurements).length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">
-                    Last updated: {new Date().toLocaleTimeString()}
-                  </p>
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      setSelectedDevice(deviceData.device.id);
+                      setSelectedMeasurementType(
+                        Object.keys(deviceData.latestMeasurements)[0]
+                      );
+                    }}
+                    className="w-full text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium py-1 px-2 rounded border border-blue-200 hover:border-blue-300 transition-colors"
+                  >
+                    View History (Last 10)
+                  </button>
                 </div>
               )}
             </div>
-          ))}
-        </div>
 
-        {devices.length === 0 && (
-          <div className="text-center py-12">
-            <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Devices Found
-            </h3>
-            <p className="text-gray-600">
-              No IoT devices are currently registered
-            </p>
+            {/* Last Update */}
+            {Object.keys(deviceData.latestMeasurements).length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs text-gray-500 text-center">
+                  Last updated: {new Date().toLocaleTimeString()}
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        ))}
       </div>
+
+      {devices.length === 0 && (
+        <div className="text-center py-12">
+          <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No Devices Found
+          </h3>
+          <p className="text-gray-600">
+            No IoT devices are currently registered
+          </p>
+        </div>
+      )}
 
       {/* History Modal */}
       {selectedDevice && selectedMeasurementType && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                 Measurement History
               </h3>
               <button
@@ -472,25 +475,34 @@ const IoTDashboard: React.FC = () => {
                   setSelectedDevice(null);
                   setSelectedMeasurementType(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-1"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
               {(() => {
-                const device = devices.find(d => d.device.id === selectedDevice);
-                if (!device || !device.measurementHistory[selectedMeasurementType]) {
+                const device = devices.find(
+                  (d) => d.device.id === selectedDevice
+                );
+                if (
+                  !device ||
+                  !selectedMeasurementType ||
+                  !device.measurementHistory[selectedMeasurementType]
+                ) {
                   return (
                     <div className="text-center py-8">
                       <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No historical data available</p>
+                      <p className="text-gray-500">
+                        No historical data available
+                      </p>
                     </div>
                   );
                 }
 
-                const history = device.measurementHistory[selectedMeasurementType];
+                const history =
+                  device.measurementHistory[selectedMeasurementType];
                 return (
                   <div>
                     <div className="mb-4">
@@ -500,44 +512,48 @@ const IoTDashboard: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         {getMeasurementIcon(selectedMeasurementType)}
                         <span className="text-sm font-medium text-gray-700 capitalize">
-                          {selectedMeasurementType === "co2" ? "CO₂" : selectedMeasurementType}
+                          {selectedMeasurementType === "co2"
+                            ? "CO₂"
+                            : selectedMeasurementType}
                         </span>
                       </div>
                     </div>
-                    
-                    <div className="space-y-3">
-                      {history.map((measurement, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="text-sm font-medium text-gray-600">
-                              #{history.length - index}
+
+                    <div className="space-y-2 sm:space-y-3">
+                      {history.map(
+                        (measurement: Measurement, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg"
+                          >
+                            <div className="flex items-center space-x-2 sm:space-x-3">
+                              <div className="text-xs sm:text-sm font-medium text-gray-600">
+                                #{history.length - index}
+                              </div>
+                              <div className="text-xs sm:text-sm text-gray-500">
+                                {new Date(measurement.time).toLocaleString()}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-500">
-                              {new Date(measurement.time).toLocaleString()}
+                            <div className="text-right">
+                              <span
+                                className={`text-base sm:text-lg font-bold ${getMeasurementColor(
+                                  selectedMeasurementType,
+                                  measurement.value
+                                )}`}
+                              >
+                                {measurement.value.toFixed(1)}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-1">
+                                {selectedMeasurementType === "temperature"
+                                  ? "°C"
+                                  : selectedMeasurementType === "co2"
+                                  ? "ppm"
+                                  : ""}
+                              </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <span
-                              className={`text-lg font-bold ${getMeasurementColor(
-                                selectedMeasurementType,
-                                measurement.value
-                              )}`}
-                            >
-                              {measurement.value.toFixed(1)}
-                            </span>
-                            <span className="text-xs text-gray-500 ml-1">
-                              {selectedMeasurementType === "temperature"
-                                ? "°C"
-                                : selectedMeasurementType === "co2"
-                                ? "ppm"
-                                : ""}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   </div>
                 );
