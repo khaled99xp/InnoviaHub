@@ -8,6 +8,11 @@ import {
   Wifi,
   WifiOff,
   X,
+  Droplets,
+  Zap,
+  Users,
+  DoorOpen,
+  Battery,
 } from "lucide-react";
 
 interface IoTDevice {
@@ -226,6 +231,18 @@ const IoTDashboard: React.FC = () => {
         return <Thermometer className="w-5 h-5 text-red-500" />;
       case "co2":
         return <Wind className="w-5 h-5 text-blue-500" />;
+      case "humidity":
+        return <Droplets className="w-5 h-5 text-cyan-500" />;
+      case "voc":
+        return <Zap className="w-5 h-5 text-purple-500" />;
+      case "occupancy":
+        return <Users className="w-5 h-5 text-green-500" />;
+      case "door":
+        return <DoorOpen className="w-5 h-5 text-orange-500" />;
+      case "energy":
+        return <Battery className="w-5 h-5 text-yellow-500" />;
+      case "power":
+        return <Zap className="w-5 h-5 text-indigo-500" />;
       default:
         return <Activity className="w-5 h-5 text-gray-500" />;
     }
@@ -240,6 +257,28 @@ const IoTDashboard: React.FC = () => {
       case "co2":
         if (value > 1200) return "text-red-600";
         if (value > 1000) return "text-orange-500";
+        return "text-green-600";
+      case "humidity":
+        if (value > 70) return "text-red-600";
+        if (value > 60) return "text-orange-500";
+        return "text-green-600";
+      case "voc":
+        if (value > 400) return "text-red-600";
+        if (value > 200) return "text-orange-500";
+        return "text-green-600";
+      case "occupancy":
+        if (value > 8) return "text-red-600";
+        if (value > 5) return "text-orange-500";
+        return "text-green-600";
+      case "door":
+        return value === 1 ? "text-red-600" : "text-green-600";
+      case "energy":
+        if (value > 4) return "text-red-600";
+        if (value > 2) return "text-orange-500";
+        return "text-green-600";
+      case "power":
+        if (value > 800) return "text-red-600";
+        if (value > 500) return "text-orange-500";
         return "text-green-600";
       default:
         return "text-gray-600";
@@ -327,16 +366,60 @@ const IoTDashboard: React.FC = () => {
                 Active Alerts ({alerts.length})
               </h3>
               <div className="mt-2 space-y-2">
-                {alerts.slice(0, 3).map((alert, index) => (
-                  <div
-                    key={index}
-                    className="text-xs sm:text-sm text-red-700 bg-red-100 p-2 rounded"
-                  >
-                    <strong>{alert.message}</strong> - Device: {alert.deviceId}{" "}
-                    ({alert.value.toFixed(1)}
-                    {alert.type === "temperature" ? "°C" : "ppm"})
-                  </div>
-                ))}
+                {alerts.slice(0, 3).map((alert, index) => {
+                  // Find device info for this alert
+                  const deviceInfo = devices.find(d => d.device.id === alert.deviceId);
+                  const deviceName = deviceInfo ? deviceInfo.device.serial : `Device ${alert.deviceId.slice(-4)}`;
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="text-xs sm:text-sm text-red-700 bg-red-100 p-2 rounded"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-red-800 truncate">
+                            {alert.message}
+                          </div>
+                          <div className="text-red-600 mt-1">
+                            {deviceName} - {alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
+                          </div>
+                          <div className="text-xs text-red-500 mt-1">
+                            {new Date(alert.time).toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="ml-2 text-right">
+                          <div className="font-bold text-red-800">
+                            {alert.type === "door"
+                              ? (alert.value === 1 ? "Open" : "Closed")
+                              : alert.type === "occupancy"
+                              ? Math.round(alert.value).toString()
+                              : alert.value.toFixed(1)}
+                          </div>
+                          <div className="text-xs text-red-500">
+                            {alert.type === "temperature"
+                              ? "°C"
+                              : alert.type === "co2"
+                              ? "ppm"
+                              : alert.type === "humidity"
+                              ? "%"
+                              : alert.type === "voc"
+                              ? "ppb"
+                              : alert.type === "occupancy"
+                              ? "people"
+                              : alert.type === "door"
+                              ? ""
+                              : alert.type === "energy"
+                              ? "kWh"
+                              : alert.type === "power"
+                              ? "W"
+                              : ""}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                 {alerts.length > 3 && (
                   <div className="text-xs sm:text-sm text-red-600">
                     +{alerts.length - 3} more alerts
@@ -348,44 +431,47 @@ const IoTDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Devices Grid */}
+      {/* Sensors Grid - Each sensor type gets its own card */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {devices.map((deviceData) => (
-          <div
-            key={deviceData.device.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow"
-          >
-            {/* Device Header */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                  {deviceData.device.serial}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-600 truncate">
-                  {deviceData.device.model}
-                </p>
-              </div>
+        {devices.flatMap((deviceData) =>
+          Object.entries(deviceData.latestMeasurements).map(
+            ([type, measurement]) => (
               <div
-                className={`flex items-center space-x-1 ml-2 ${getStatusColor(
-                  deviceData.isOnline
-                )}`}
+                key={`${deviceData.device.id}-${type}`}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow"
               >
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    deviceData.isOnline ? "bg-green-500" : "bg-red-500"
-                  }`}
-                ></div>
-                <span className="text-xs font-medium">
-                  {deviceData.isOnline ? "Online" : "Offline"}
-                </span>
-              </div>
-            </div>
+                {/* Sensor Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                      {deviceData.device.serial} -{" "}
+                      {type === "co2"
+                        ? "CO₂"
+                        : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 truncate">
+                      {deviceData.device.model}
+                    </p>
+                  </div>
+                  <div
+                    className={`flex items-center space-x-1 ml-2 ${getStatusColor(
+                      deviceData.isOnline
+                    )}`}
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        deviceData.isOnline ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></div>
+                    <span className="text-xs font-medium">
+                      {deviceData.isOnline ? "Online" : "Offline"}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Measurements */}
-            <div className="space-y-2 mb-3">
-              {Object.entries(deviceData.latestMeasurements).map(
-                ([type, measurement]) => (
-                  <div key={type} className="flex items-center justify-between">
+                {/* Single Measurement */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       {getMeasurementIcon(type)}
                       <span className="text-xs sm:text-sm text-gray-600 capitalize">
@@ -394,70 +480,73 @@ const IoTDashboard: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <span
-                        className={`text-sm sm:text-base font-bold ${getMeasurementColor(
+                        className={`text-lg sm:text-xl font-bold ${getMeasurementColor(
                           type,
                           measurement.value
                         )}`}
                       >
-                        {measurement.value.toFixed(1)}
+                        {type === "door"
+                          ? (measurement.value === 1 ? "Open" : "Closed")
+                          : type === "occupancy"
+                          ? Math.round(measurement.value).toString()
+                          : measurement.value.toFixed(1)}
                       </span>
-                      <span className="text-xs text-gray-500 ml-1">
+                      <span className="text-sm text-gray-500 ml-1">
                         {type === "temperature"
                           ? "°C"
                           : type === "co2"
                           ? "ppm"
+                          : type === "humidity"
+                          ? "%"
+                          : type === "voc"
+                          ? "ppb"
+                          : type === "occupancy"
+                          ? "people"
+                          : type === "door"
+                          ? (measurement.value === 1 ? "Open" : "Closed")
+                          : type === "energy"
+                          ? "kWh"
+                          : type === "power"
+                          ? "W"
                           : ""}
                       </span>
                     </div>
                   </div>
-                )
-              )}
-
-              {Object.keys(deviceData.latestMeasurements).length === 0 && (
-                <div className="text-center py-4">
-                  <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No data available</p>
                 </div>
-              )}
 
-              {/* History Button */}
-              {Object.keys(deviceData.latestMeasurements).length > 0 && (
+                {/* History Button */}
                 <div className="mt-3 pt-3 border-t border-gray-100">
                   <button
                     onClick={() => {
                       setSelectedDevice(deviceData.device.id);
-                      setSelectedMeasurementType(
-                        Object.keys(deviceData.latestMeasurements)[0]
-                      );
+                      setSelectedMeasurementType(type);
                     }}
                     className="w-full text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium py-1 px-2 rounded border border-blue-200 hover:border-blue-300 transition-colors"
                   >
                     View History (Last 10)
                   </button>
                 </div>
-              )}
-            </div>
 
-            {/* Last Update */}
-            {Object.keys(deviceData.latestMeasurements).length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-500 text-center">
-                  Last updated: {new Date().toLocaleTimeString()}
-                </p>
+                {/* Last Update */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 text-center">
+                    Last updated: {new Date().toLocaleTimeString()}
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+            )
+          )
+        )}
       </div>
 
       {devices.length === 0 && (
         <div className="text-center py-12">
           <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No Devices Found
+            No Sensors Found
           </h3>
           <p className="text-gray-600">
-            No IoT devices are currently registered
+            No IoT sensors are currently registered or active
           </p>
         </div>
       )}
@@ -535,21 +624,37 @@ const IoTDashboard: React.FC = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <span
-                                className={`text-base sm:text-lg font-bold ${getMeasurementColor(
-                                  selectedMeasurementType,
-                                  measurement.value
-                                )}`}
-                              >
-                                {measurement.value.toFixed(1)}
-                              </span>
-                              <span className="text-xs text-gray-500 ml-1">
-                                {selectedMeasurementType === "temperature"
-                                  ? "°C"
-                                  : selectedMeasurementType === "co2"
-                                  ? "ppm"
-                                  : ""}
-                              </span>
+                                          <span
+                                            className={`text-base sm:text-lg font-bold ${getMeasurementColor(
+                                              selectedMeasurementType,
+                                              measurement.value
+                                            )}`}
+                                          >
+                                            {selectedMeasurementType === "door"
+                                              ? (measurement.value === 1 ? "Open" : "Closed")
+                                              : selectedMeasurementType === "occupancy"
+                                              ? Math.round(measurement.value).toString()
+                                              : measurement.value.toFixed(1)}
+                                          </span>
+                                          <span className="text-xs text-gray-500 ml-1">
+                                            {selectedMeasurementType === "temperature"
+                                              ? "°C"
+                                              : selectedMeasurementType === "co2"
+                                              ? "ppm"
+                                              : selectedMeasurementType === "humidity"
+                                              ? "%"
+                                              : selectedMeasurementType === "voc"
+                                              ? "ppb"
+                                              : selectedMeasurementType === "occupancy"
+                                              ? "people"
+                                              : selectedMeasurementType === "door"
+                                              ? (measurement.value === 1 ? "Open" : "Closed")
+                                              : selectedMeasurementType === "energy"
+                                              ? "kWh"
+                                              : selectedMeasurementType === "power"
+                                              ? "W"
+                                              : ""}
+                                          </span>
                             </div>
                           </div>
                         )
