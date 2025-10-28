@@ -15,6 +15,8 @@ import MyBookings from "./pages/MyBookings";
 import AIChatPage from "./pages/AIChat";
 import AIInsightsPage from "./pages/Admin/AIInsights";
 import Payment from "./pages/Payment";
+import IoTDashboard from "./pages/Admin/IoTDashboard";
+import RulesManagement from "./pages/Admin/RulesManagement";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
@@ -87,6 +89,11 @@ function App() {
                   <Route path="bookings" element={<Bookings />} />
                   <Route path="resources" element={<Resources />} />
                   <Route path="ai-insights" element={<AIInsightsPage />} />
+                  <Route path="iot-dashboard" element={<IoTDashboard />} />
+                  <Route
+                    path="rules-management"
+                    element={<RulesManagement />}
+                  />
                   <Route
                     path="*"
                     element={<Navigate to="/admin/dashboard" replace />}

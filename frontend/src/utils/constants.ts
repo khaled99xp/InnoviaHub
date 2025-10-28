@@ -76,6 +76,18 @@ export const NAV_ITEMS = [
         icon: "MdAnalytics",
         path: "/admin/ai-insights",
     },
+    {
+        id: "iot-dashboard",
+        label: "IoT Dashboard",
+        icon: "MdDevices",
+        path: "/admin/iot-dashboard",
+    },
+    {
+        id: "rules-management",
+        label: "Rules Management",
+        icon: "MdRule",
+        path: "/admin/rules-management",
+    },
 ] as const;
 
 // User Roles
