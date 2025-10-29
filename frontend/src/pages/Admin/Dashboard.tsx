@@ -1,6 +1,7 @@
 import React from "react";
 import { useDashboardStats } from "../../hooks/useApi";
 import StatsCards from "../../components/Admin/Dashboard/StatsCards/StatsCards";
+import DeviceAnalytics from "../../components/Admin/Dashboard/DeviceAnalytics";
 import { useAdminAuth } from "../../context/AdminAuthProvider";
 
 const Dashboard: React.FC = () => {
@@ -58,6 +59,11 @@ const Dashboard: React.FC = () => {
       {/* Stats Cards */}
       <div>
         <StatsCards dashboardStats={dashboardStats} />
+      </div>
+
+      {/* Device Analytics */}
+      <div>
+        <DeviceAnalytics />
       </div>
     </div>
   );

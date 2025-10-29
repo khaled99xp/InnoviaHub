@@ -1,6 +1,6 @@
 import React from "react";
 import StatsCard from "./StatsCard";
-import { MdPeople, MdEvent, MdBusiness } from "react-icons/md";
+import { MdPeople, MdEvent, MdBusiness, MdDevices } from "react-icons/md";
 import type { DashboardStats } from "../../../../types/admin";
 
 interface StatsCardsProps {
@@ -36,6 +36,15 @@ const StatsCards: React.FC<StatsCardsProps> = ({ dashboardStats }) => {
       icon: MdBusiness,
       color: "gray" as const,
       description: "Available resources",
+    },
+    {
+      title: "IoT Devices",
+      value: "10",
+      change: "Online",
+      changeType: "positive" as const,
+      icon: MdDevices,
+      color: "purple" as const,
+      description: "Connected sensors",
     },
   ];
 

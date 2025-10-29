@@ -13,7 +13,9 @@ import {
   Users,
   DoorOpen,
   Battery,
+  Settings,
 } from "lucide-react";
+import { DeviceManagement } from "../../components/Admin/IoT";
 
 interface IoTDevice {
   id: string;
@@ -47,6 +49,7 @@ interface DeviceData {
   latestMeasurements: { [key: string]: Measurement };
   measurementHistory: { [key: string]: Measurement[] };
   isOnline: boolean;
+  deviceStatus: string; // "active" or "inactive" from database
 }
 
 const IoTDashboard: React.FC = () => {
@@ -57,9 +60,9 @@ const IoTDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
-  const [selectedMeasurementType, setSelectedMeasurementType] = useState<
-    string | null
-  >(null);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "management">(
+    "dashboard"
+  );
 
   // Fetch historical measurements for a device
   const fetchDeviceHistory = async (deviceId: string) => {
@@ -117,6 +120,7 @@ const IoTDashboard: React.FC = () => {
           latestMeasurements: {},
           measurementHistory: history,
           isOnline: false,
+          deviceStatus: device.status || "active",
         };
       });
 
@@ -127,6 +131,24 @@ const IoTDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Handle device management events
+  const handleDeviceAdded = useCallback(() => {
+    // Refresh devices list
+    fetchDevices();
+  }, [fetchDevices]);
+
+  const handleDeviceUpdated = useCallback(() => {
+    // Refresh devices list
+    fetchDevices();
+  }, [fetchDevices]);
+
+  const handleDeviceDeleted = useCallback((deviceId: string) => {
+    // Remove device from state
+    setDevices((prevDevices) =>
+      prevDevices.filter((deviceData) => deviceData.device.id !== deviceId)
+    );
   }, []);
 
   // Setup SignalR connection
@@ -285,8 +307,51 @@ const IoTDashboard: React.FC = () => {
     }
   };
 
-  const getStatusColor = (isOnline: boolean) => {
-    return isOnline ? "text-green-500" : "text-red-500";
+  const getDeviceModel = (
+    deviceSerial: string,
+    _measurements: { [key: string]: Measurement },
+    actualModel?: string
+  ) => {
+    // Map device serial to appropriate model based on device serial
+    // This ensures consistent naming regardless of measurement data
+    const modelMap: { [key: string]: string } = {
+      "dev-101": "Acme Temperature Sensor",
+      "dev-102": "Acme CO₂ Monitor",
+      "dev-103": "Acme Humidity Sensor",
+      "dev-104": "Acme Temperature Pro",
+      "dev-105": "Acme VOC Detector",
+      "dev-106": "Acme Occupancy Counter",
+      "dev-107": "Acme Door Sensor",
+      "dev-108": "Acme Energy Meter",
+      "dev-109": "Acme Power Monitor",
+      "dev-110": "Acme CO₂ Pro",
+      "dev-111": "Acme Temperature Sensor",
+      "dev-112": "Acme CO₂ Monitor",
+    };
+
+    // Return mapped model if available, otherwise use actual model or fallback
+    return modelMap[deviceSerial] || actualModel || "Acme IoT Sensor";
+  };
+
+  const getStatusColor = (isOnline: boolean, deviceStatus: string) => {
+    // Device must be active in database AND receiving data to be truly online
+    const isActive = deviceStatus === "active";
+    const isTrulyOnline = isOnline && isActive;
+    return isTrulyOnline ? "text-green-500" : "text-red-500";
+  };
+
+  const getStatusText = (isOnline: boolean, deviceStatus: string) => {
+    // Device must be active in database AND receiving data to be truly online
+    const isActive = deviceStatus === "active";
+    if (!isActive) return "Inactive";
+    return isOnline ? "Online" : "Offline";
+  };
+
+  const getStatusDotColor = (isOnline: boolean, deviceStatus: string) => {
+    // Device must be active in database AND receiving data to be truly online
+    const isActive = deviceStatus === "active";
+    const isTrulyOnline = isOnline && isActive;
+    return isTrulyOnline ? "bg-green-500" : "bg-red-500";
   };
 
   if (loading) {
@@ -356,162 +421,218 @@ const IoTDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Alerts */}
-      {alerts.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-3 sm:p-4">
-          <div className="flex items-start">
-            <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="text-sm sm:text-base font-medium text-red-800">
-                Active Alerts ({alerts.length})
-              </h3>
-              <div className="mt-2 space-y-2">
-                {alerts.slice(0, 3).map((alert, index) => {
-                  // Find device info for this alert
-                  const deviceInfo = devices.find(d => d.device.id === alert.deviceId);
-                  const deviceName = deviceInfo ? deviceInfo.device.serial : `Device ${alert.deviceId.slice(-4)}`;
-                  
-                  return (
-                    <div
-                      key={index}
-                      className="text-xs sm:text-sm text-red-700 bg-red-100 p-2 rounded"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-red-800 truncate">
-                            {alert.message}
-                          </div>
-                          <div className="text-red-600 mt-1">
-                            {deviceName} - {alert.type.charAt(0).toUpperCase() + alert.type.slice(1)}
-                          </div>
-                          <div className="text-xs text-red-500 mt-1">
-                            {new Date(alert.time).toLocaleString()}
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "dashboard"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Activity className="w-4 h-4" />
+              <span>Dashboard</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("management")}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "management"
+                ? "border-blue-500 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <Settings className="w-4 h-4" />
+              <span>Device Management</span>
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === "dashboard" && (
+        <>
+          {/* Alerts */}
+          {alerts.length > 0 && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-3 sm:p-4">
+              <div className="flex items-start">
+                <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="text-sm sm:text-base font-medium text-red-800">
+                    Active Alerts ({alerts.length})
+                  </h3>
+                  <div className="mt-2 space-y-2">
+                    {alerts.slice(0, 3).map((alert, index) => {
+                      // Find device info for this alert
+                      const deviceInfo = devices.find(
+                        (d) => d.device.id === alert.deviceId
+                      );
+                      const deviceName = deviceInfo
+                        ? deviceInfo.device.serial
+                        : `Device ${alert.deviceId.slice(-4)}`;
+
+                      return (
+                        <div
+                          key={index}
+                          className="text-xs sm:text-sm text-red-700 bg-red-100 p-2 rounded"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-red-800 truncate">
+                                {alert.message}
+                              </div>
+                              <div className="text-red-600 mt-1">
+                                {deviceName} -{" "}
+                                {alert.type.charAt(0).toUpperCase() +
+                                  alert.type.slice(1)}
+                              </div>
+                              <div className="text-xs text-red-500 mt-1">
+                                {new Date(alert.time).toLocaleString()}
+                              </div>
+                            </div>
+                            <div className="ml-2 text-right">
+                              <div className="font-bold text-red-800">
+                                {alert.type === "door"
+                                  ? alert.value === 1
+                                    ? "Open"
+                                    : "Closed"
+                                  : alert.type === "occupancy"
+                                  ? Math.round(alert.value).toString()
+                                  : alert.value.toFixed(1)}
+                              </div>
+                              <div className="text-xs text-red-500">
+                                {alert.type === "temperature"
+                                  ? "°C"
+                                  : alert.type === "co2"
+                                  ? "ppm"
+                                  : alert.type === "humidity"
+                                  ? "%"
+                                  : alert.type === "voc"
+                                  ? "ppb"
+                                  : alert.type === "occupancy"
+                                  ? "people"
+                                  : alert.type === "door"
+                                  ? ""
+                                  : alert.type === "energy"
+                                  ? "kWh"
+                                  : alert.type === "power"
+                                  ? "W"
+                                  : ""}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="ml-2 text-right">
-                          <div className="font-bold text-red-800">
-                            {alert.type === "door"
-                              ? (alert.value === 1 ? "Open" : "Closed")
-                              : alert.type === "occupancy"
-                              ? Math.round(alert.value).toString()
-                              : alert.value.toFixed(1)}
-                          </div>
-                          <div className="text-xs text-red-500">
-                            {alert.type === "temperature"
-                              ? "°C"
-                              : alert.type === "co2"
-                              ? "ppm"
-                              : alert.type === "humidity"
-                              ? "%"
-                              : alert.type === "voc"
-                              ? "ppb"
-                              : alert.type === "occupancy"
-                              ? "people"
-                              : alert.type === "door"
-                              ? ""
-                              : alert.type === "energy"
-                              ? "kWh"
-                              : alert.type === "power"
-                              ? "W"
-                              : ""}
-                          </div>
-                        </div>
+                      );
+                    })}
+                    {alerts.length > 3 && (
+                      <div className="text-xs sm:text-sm text-red-600">
+                        +{alerts.length - 3} more alerts
                       </div>
-                    </div>
-                  );
-                })}
-                {alerts.length > 3 && (
-                  <div className="text-xs sm:text-sm text-red-600">
-                    +{alerts.length - 3} more alerts
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Sensors Grid - Each sensor type gets its own card */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-        {devices.flatMap((deviceData) =>
-          Object.entries(deviceData.latestMeasurements).map(
-            ([type, measurement]) => (
+          {/* Devices Grid - Each device gets its own card */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            {devices.map((deviceData) => (
               <div
-                key={`${deviceData.device.id}-${type}`}
+                key={deviceData.device.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow"
               >
-                {/* Sensor Header */}
+                {/* Device Header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                      {deviceData.device.serial} -{" "}
-                      {type === "co2"
-                        ? "CO₂"
-                        : type.charAt(0).toUpperCase() + type.slice(1)}
+                      {deviceData.device.serial}
                     </h3>
                     <p className="text-xs sm:text-sm text-gray-600 truncate">
-                      {deviceData.device.model}
+                      {getDeviceModel(
+                        deviceData.device.serial,
+                        deviceData.latestMeasurements,
+                        deviceData.device.model
+                      )}
                     </p>
                   </div>
                   <div
                     className={`flex items-center space-x-1 ml-2 ${getStatusColor(
-                      deviceData.isOnline
+                      deviceData.isOnline,
+                      deviceData.deviceStatus
                     )}`}
                   >
                     <div
-                      className={`w-2 h-2 rounded-full ${
-                        deviceData.isOnline ? "bg-green-500" : "bg-red-500"
-                      }`}
+                      className={`w-2 h-2 rounded-full ${getStatusDotColor(
+                        deviceData.isOnline,
+                        deviceData.deviceStatus
+                      )}`}
                     ></div>
                     <span className="text-xs font-medium">
-                      {deviceData.isOnline ? "Online" : "Offline"}
+                      {getStatusText(
+                        deviceData.isOnline,
+                        deviceData.deviceStatus
+                      )}
                     </span>
                   </div>
                 </div>
 
-                {/* Single Measurement */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      {getMeasurementIcon(type)}
-                      <span className="text-xs sm:text-sm text-gray-600 capitalize">
-                        {type === "co2" ? "CO₂" : type}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span
-                        className={`text-lg sm:text-xl font-bold ${getMeasurementColor(
-                          type,
-                          measurement.value
-                        )}`}
+                {/* Device Measurements */}
+                <div className="space-y-2 mb-3">
+                  {Object.entries(deviceData.latestMeasurements).map(
+                    ([type, measurement]) => (
+                      <div
+                        key={type}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
                       >
-                        {type === "door"
-                          ? (measurement.value === 1 ? "Open" : "Closed")
-                          : type === "occupancy"
-                          ? Math.round(measurement.value).toString()
-                          : measurement.value.toFixed(1)}
-                      </span>
-                      <span className="text-sm text-gray-500 ml-1">
-                        {type === "temperature"
-                          ? "°C"
-                          : type === "co2"
-                          ? "ppm"
-                          : type === "humidity"
-                          ? "%"
-                          : type === "voc"
-                          ? "ppb"
-                          : type === "occupancy"
-                          ? "people"
-                          : type === "door"
-                          ? (measurement.value === 1 ? "Open" : "Closed")
-                          : type === "energy"
-                          ? "kWh"
-                          : type === "power"
-                          ? "W"
-                          : ""}
-                      </span>
-                    </div>
-                  </div>
+                        <div className="flex items-center space-x-2">
+                          {getMeasurementIcon(type)}
+                          <span className="text-xs sm:text-sm text-gray-600 capitalize">
+                            {type === "co2" ? "CO₂" : type}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span
+                            className={`text-sm sm:text-base font-bold ${getMeasurementColor(
+                              type,
+                              measurement.value
+                            )}`}
+                          >
+                            {type === "door"
+                              ? measurement.value === 1
+                                ? "Open"
+                                : "Closed"
+                              : type === "occupancy"
+                              ? Math.round(measurement.value).toString()
+                              : measurement.value.toFixed(1)}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-1">
+                            {type === "temperature"
+                              ? "°C"
+                              : type === "co2"
+                              ? "ppm"
+                              : type === "humidity"
+                              ? "%"
+                              : type === "voc"
+                              ? "ppb"
+                              : type === "occupancy"
+                              ? "people"
+                              : type === "door"
+                              ? ""
+                              : type === "energy"
+                              ? "kWh"
+                              : type === "power"
+                              ? "W"
+                              : ""}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )}
                 </div>
 
                 {/* History Button */}
@@ -519,11 +640,10 @@ const IoTDashboard: React.FC = () => {
                   <button
                     onClick={() => {
                       setSelectedDevice(deviceData.device.id);
-                      setSelectedMeasurementType(type);
                     }}
                     className="w-full text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium py-1 px-2 rounded border border-blue-200 hover:border-blue-300 transition-colors"
                   >
-                    View History (Last 10)
+                    View Device History
                   </button>
                 </div>
 
@@ -534,138 +654,180 @@ const IoTDashboard: React.FC = () => {
                   </p>
                 </div>
               </div>
-            )
-          )
-        )}
-      </div>
+            ))}
+          </div>
 
-      {devices.length === 0 && (
-        <div className="text-center py-12">
-          <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No Sensors Found
-          </h3>
-          <p className="text-gray-600">
-            No IoT sensors are currently registered or active
-          </p>
-        </div>
-      )}
-
-      {/* History Modal */}
-      {selectedDevice && selectedMeasurementType && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                Measurement History
+          {devices.length === 0 && (
+            <div className="text-center py-12">
+              <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No Devices Found
               </h3>
-              <button
-                onClick={() => {
-                  setSelectedDevice(null);
-                  setSelectedMeasurementType(null);
-                }}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
+              <p className="text-gray-600">
+                No IoT devices are currently registered or active
+              </p>
             </div>
+          )}
 
-            <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
-              {(() => {
-                const device = devices.find(
-                  (d) => d.device.id === selectedDevice
-                );
-                if (
-                  !device ||
-                  !selectedMeasurementType ||
-                  !device.measurementHistory[selectedMeasurementType]
-                ) {
-                  return (
-                    <div className="text-center py-8">
-                      <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">
-                        No historical data available
-                      </p>
-                    </div>
-                  );
-                }
+          {/* History Modal */}
+          {selectedDevice && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                    Device History
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setSelectedDevice(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  </button>
+                </div>
 
-                const history =
-                  device.measurementHistory[selectedMeasurementType];
-                return (
-                  <div>
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">
-                        Device: {device.device.serial} - {device.device.model}
-                      </h4>
-                      <div className="flex items-center space-x-2">
-                        {getMeasurementIcon(selectedMeasurementType)}
-                        <span className="text-sm font-medium text-gray-700 capitalize">
-                          {selectedMeasurementType === "co2"
-                            ? "CO₂"
-                            : selectedMeasurementType}
-                        </span>
-                      </div>
-                    </div>
+                <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
+                  {(() => {
+                    const device = devices.find(
+                      (d) => d.device.id === selectedDevice
+                    );
+                    if (!device) {
+                      return (
+                        <div className="text-center py-8">
+                          <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500">
+                            No device data available
+                          </p>
+                        </div>
+                      );
+                    }
 
-                    <div className="space-y-2 sm:space-y-3">
-                      {history.map(
-                        (measurement: Measurement, index: number) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg"
-                          >
-                            <div className="flex items-center space-x-2 sm:space-x-3">
-                              <div className="text-xs sm:text-sm font-medium text-gray-600">
-                                #{history.length - index}
+                    return (
+                      <div>
+                        <div className="mb-6">
+                          <h4 className="text-lg font-medium text-gray-900 mb-2">
+                            {device.device.serial} -{" "}
+                            {getDeviceModel(
+                              device.device.serial,
+                              device.latestMeasurements,
+                              device.device.model
+                            )}
+                          </h4>
+                          <div className="flex items-center space-x-2">
+                            <div
+                              className={`w-2 h-2 rounded-full ${getStatusDotColor(
+                                device.isOnline,
+                                device.deviceStatus
+                              )}`}
+                            ></div>
+                            <span className="text-sm text-gray-600">
+                              {getStatusText(
+                                device.isOnline,
+                                device.deviceStatus
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Show history for each measurement type */}
+                        {Object.entries(device.measurementHistory).map(
+                          ([type, history]) => (
+                            <div key={type} className="mb-6">
+                              <div className="flex items-center space-x-2 mb-3">
+                                {getMeasurementIcon(type)}
+                                <h5 className="text-sm font-medium text-gray-700 capitalize">
+                                  {type === "co2" ? "CO₂" : type} History
+                                </h5>
                               </div>
-                              <div className="text-xs sm:text-sm text-gray-500">
-                                {new Date(measurement.time).toLocaleString()}
-                              </div>
-                            </div>
-                            <div className="text-right">
+
+                              <div className="space-y-2">
+                                {history
+                                  .slice(0, 5)
+                                  .map(
+                                    (
+                                      measurement: Measurement,
+                                      index: number
+                                    ) => (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg"
+                                      >
+                                        <div className="flex items-center space-x-2 sm:space-x-3">
+                                          <div className="text-xs sm:text-sm font-medium text-gray-600">
+                                            #{history.length - index}
+                                          </div>
+                                          <div className="text-xs sm:text-sm text-gray-500">
+                                            {new Date(
+                                              measurement.time
+                                            ).toLocaleString()}
+                                          </div>
+                                        </div>
+                                        <div className="text-right">
                                           <span
-                                            className={`text-base sm:text-lg font-bold ${getMeasurementColor(
-                                              selectedMeasurementType,
+                                            className={`text-sm sm:text-base font-bold ${getMeasurementColor(
+                                              type,
                                               measurement.value
                                             )}`}
                                           >
-                                            {selectedMeasurementType === "door"
-                                              ? (measurement.value === 1 ? "Open" : "Closed")
-                                              : selectedMeasurementType === "occupancy"
-                                              ? Math.round(measurement.value).toString()
+                                            {type === "door"
+                                              ? measurement.value === 1
+                                                ? "Open"
+                                                : "Closed"
+                                              : type === "occupancy"
+                                              ? Math.round(
+                                                  measurement.value
+                                                ).toString()
                                               : measurement.value.toFixed(1)}
                                           </span>
                                           <span className="text-xs text-gray-500 ml-1">
-                                            {selectedMeasurementType === "temperature"
+                                            {type === "temperature"
                                               ? "°C"
-                                              : selectedMeasurementType === "co2"
+                                              : type === "co2"
                                               ? "ppm"
-                                              : selectedMeasurementType === "humidity"
+                                              : type === "humidity"
                                               ? "%"
-                                              : selectedMeasurementType === "voc"
+                                              : type === "voc"
                                               ? "ppb"
-                                              : selectedMeasurementType === "occupancy"
+                                              : type === "occupancy"
                                               ? "people"
-                                              : selectedMeasurementType === "door"
-                                              ? (measurement.value === 1 ? "Open" : "Closed")
-                                              : selectedMeasurementType === "energy"
+                                              : type === "door"
+                                              ? ""
+                                              : type === "energy"
                                               ? "kWh"
-                                              : selectedMeasurementType === "power"
+                                              : type === "power"
                                               ? "W"
                                               : ""}
                                           </span>
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
+                                {history.length > 5 && (
+                                  <div className="text-xs text-gray-500 text-center py-2">
+                                    +{history.length - 5} more measurements
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+                          )
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
+      )}
+
+      {activeTab === "management" && (
+        <DeviceManagement
+          onDeviceAdded={handleDeviceAdded}
+          onDeviceUpdated={handleDeviceUpdated}
+          onDeviceDeleted={handleDeviceDeleted}
+        />
       )}
     </div>
   );

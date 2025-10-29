@@ -8,7 +8,7 @@ interface StatsCardProps {
   change: string;
   changeType: "positive" | "negative" | "neutral";
   icon: IconType;
-  color: "blue" | "green" | "gray";
+  color: "blue" | "green" | "gray" | "purple";
   description: string;
 }
 
@@ -36,6 +36,11 @@ const StatsCard: React.FC<StatsCardProps> = ({
       bg: "bg-gray-50",
       icon: "text-gray-600",
       iconBg: "bg-gray-100",
+    },
+    purple: {
+      bg: "bg-purple-50",
+      icon: "text-purple-600",
+      iconBg: "bg-purple-100",
     },
   };
 
