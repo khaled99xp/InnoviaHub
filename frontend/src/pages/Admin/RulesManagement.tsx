@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  HubConnection,
+  HubConnectionBuilder,
+  HubConnectionState,
+} from "@microsoft/signalr";
 import {
   Plus,
   Edit,
@@ -62,7 +67,10 @@ const RulesManagement: React.FC = () => {
   const [itemsPerPage] = useState(10);
   const [sensorTypeFilter, setSensorTypeFilter] = useState<string>("all");
   const [selectedAlerts, setSelectedAlerts] = useState<string[]>([]);
-  const [showBulkActions, setShowBulkActions] = useState(false);
+
+  // Realtime connection (SignalR)
+  const connectionRef = useRef<HubConnection | null>(null);
+  const isConnectingRef = useRef<boolean>(false);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<"rules" | "alerts">("rules");
@@ -76,6 +84,7 @@ const RulesManagement: React.FC = () => {
     severity: "warning",
     message: "",
     isActive: true,
+    cooldownSeconds: 0,
   });
 
   // Get sensor type from device
@@ -206,19 +215,22 @@ const RulesManagement: React.FC = () => {
     try {
       const response = await fetch("http://localhost:5105/rules");
       if (response.ok) {
-        const rulesData = await response.json();
+        const rulesData: Rule[] = await response.json();
         console.log("Rules fetched:", rulesData);
 
         // Group rules by device and type for debugging
-        const rulesByDevice = rulesData.reduce((acc: any, rule: any) => {
-          const deviceName = getDeviceName(rule.deviceId);
-          const key = `${deviceName}-${rule.type}`;
-          if (!acc[key]) {
-            acc[key] = [];
-          }
-          acc[key].push(rule);
-          return acc;
-        }, {});
+        const rulesByDevice = rulesData.reduce(
+          (acc: Record<string, Rule[]>, rule: Rule) => {
+            const deviceName = getDeviceName(rule.deviceId);
+            const key = `${deviceName}-${rule.type}`;
+            if (!acc[key]) {
+              acc[key] = [];
+            }
+            acc[key].push(rule);
+            return acc;
+          },
+          {}
+        );
 
         console.log("Rules grouped by device and type:", rulesByDevice);
         setRules(rulesData);
@@ -233,30 +245,33 @@ const RulesManagement: React.FC = () => {
     try {
       const response = await fetch("http://localhost:5105/alerts");
       if (response.ok) {
-        const alertsData = await response.json();
+        const alertsData: Alert[] = await response.json();
         console.log("Alerts fetched:", alertsData);
 
         // Group alerts by device for debugging
-        const alertsByDevice = alertsData.reduce((acc: any, alert: any) => {
-          const deviceName = getDeviceName(alert.deviceId);
-          if (!acc[deviceName]) {
-            acc[deviceName] = [];
-          }
-          acc[deviceName].push(alert);
-          return acc;
-        }, {});
+        const alertsByDevice = alertsData.reduce(
+          (acc: Record<string, Alert[]>, alert: Alert) => {
+            const deviceName = getDeviceName(alert.deviceId);
+            if (!acc[deviceName]) {
+              acc[deviceName] = [];
+            }
+            acc[deviceName].push(alert);
+            return acc;
+          },
+          {}
+        );
 
         console.log("Alerts grouped by device:", alertsByDevice);
 
         // Debug: Check if we have alerts for door sensor
         const doorAlerts = alertsData.filter(
-          (alert: any) => alert.type === "door"
+          (alert: Alert) => alert.type === "door"
         );
         console.log("Door alerts:", doorAlerts);
 
         // Debug: Check if we have alerts for power sensor
         const powerAlerts = alertsData.filter(
-          (alert: any) => alert.type === "power"
+          (alert: Alert) => alert.type === "power"
         );
         console.log("Power alerts:", powerAlerts);
 
@@ -270,10 +285,61 @@ const RulesManagement: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchDevices(), fetchRules(), fetchAlerts()]);
+      // Ensure devices are loaded before rules/alerts to avoid missing device names during mapping
+      await fetchDevices();
+      await Promise.all([fetchRules(), fetchAlerts()]);
       setLoading(false);
     };
     loadData();
+  }, []);
+
+  // Realtime: subscribe to alertRaised to reflect alerts instantly
+  useEffect(() => {
+    const setupConnection = async () => {
+      try {
+        if (isConnectingRef.current) return;
+        if (
+          connectionRef.current &&
+          connectionRef.current.state !== HubConnectionState.Disconnected
+        )
+          return;
+
+        isConnectingRef.current = true;
+
+        if (connectionRef.current) {
+          await connectionRef.current.stop();
+          connectionRef.current = null;
+        }
+
+        const newConnection = new HubConnectionBuilder()
+          .withUrl("http://localhost:5103/hub/telemetry")
+          .withAutomaticReconnect()
+          .build();
+
+        newConnection.on("alertRaised", () => {
+          // جلب من الخادم لضمان وجود id ومنع التكرار/الاختفاء
+          fetchAlerts();
+        });
+
+        await newConnection.start();
+        await newConnection.invoke("JoinTenant", "innovia");
+
+        connectionRef.current = newConnection;
+      } catch (err) {
+        console.error("SignalR connection failed (RulesManagement):", err);
+      } finally {
+        isConnectingRef.current = false;
+      }
+    };
+
+    setupConnection();
+
+    return () => {
+      const conn = connectionRef.current;
+      connectionRef.current = null;
+      if (conn) conn.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-refresh alerts every 5 seconds
@@ -306,7 +372,7 @@ const RulesManagement: React.FC = () => {
         Type: ruleForm.type,
         Op: ruleForm.operator,
         Threshold: ruleForm.threshold,
-        CooldownSeconds: 300,
+        CooldownSeconds: ruleForm.cooldownSeconds ?? 15,
         Enabled: ruleForm.isActive,
         Message:
           ruleForm.message ||
@@ -344,7 +410,7 @@ const RulesManagement: React.FC = () => {
         Type: ruleForm.type,
         Op: ruleForm.operator,
         Threshold: ruleForm.threshold,
-        CooldownSeconds: 300,
+        CooldownSeconds: ruleForm.cooldownSeconds ?? 15,
         Enabled: ruleForm.isActive,
         Message:
           ruleForm.message ||
@@ -429,6 +495,7 @@ const RulesManagement: React.FC = () => {
       severity: "warning",
       message: "",
       isActive: true,
+      cooldownSeconds: 0,
     });
   };
 
@@ -442,6 +509,7 @@ const RulesManagement: React.FC = () => {
       message:
         rule.message || `${rule.type} ${rule.operator} ${rule.threshold}`,
       isActive: rule.enabled,
+      cooldownSeconds: rule.cooldownSeconds ?? 0,
     });
     setEditingRule(rule);
   };
@@ -452,11 +520,9 @@ const RulesManagement: React.FC = () => {
       const properModel = getDeviceModel(device);
       return `${device.serial} (${properModel})`;
     }
-
-    // If device not found, try to extract serial from UUID mapping
-    // This handles cases where Rules.Engine uses UUIDs instead of serials
-    console.warn(`Device not found for ID: ${deviceId}`);
-    return deviceId; // Fallback to showing the UUID
+    // Graceful fallback without noisy console warnings (may occur during initial load)
+    const shortId = deviceId?.length > 8 ? deviceId.slice(0, 8) : deviceId;
+    return `Device ${shortId}`;
   };
 
   // Get device model with proper naming (same as IoTDashboard)
@@ -473,8 +539,6 @@ const RulesManagement: React.FC = () => {
       "dev-108": "Acme Energy Meter",
       "dev-109": "Acme Power Monitor",
       "dev-110": "Acme CO₂ Pro",
-      "dev-111": "Acme Temperature Sensor",
-      "dev-112": "Acme CO₂ Monitor",
     };
 
     // Check if we have a predefined model for this device
@@ -605,7 +669,6 @@ const RulesManagement: React.FC = () => {
           prev.filter((alert) => !selectedAlerts.includes(alert.id))
         );
         setSelectedAlerts([]);
-        setShowBulkActions(false);
         console.log("Alerts deleted successfully");
       } else {
         const errorText = await response.text();
@@ -885,7 +948,7 @@ const RulesManagement: React.FC = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {getPaginatedAlerts().map((alert) => (
                     <div
-                      key={alert.id}
+                      key={alert.id ?? `${alert.deviceId}-${alert.time}`}
                       className={`border-l-4 border-red-400 bg-red-50 p-3 sm:p-4 rounded ${
                         selectedAlerts.includes(alert.id)
                           ? "ring-2 ring-blue-500"
@@ -1134,6 +1197,33 @@ const RulesManagement: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cooldown (seconds)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={ruleForm.cooldownSeconds}
+                  onChange={(e) =>
+                    setRuleForm({
+                      ...ruleForm,
+                      cooldownSeconds: Math.max(
+                        0,
+                        parseInt(e.target.value || "0", 10)
+                      ),
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., 15"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Minimum time between repeated alerts for the same rule.
+                </p>
+              </div>
+
               <div className="flex items-center space-x-4">
                 <button
                   type="submit"
@@ -1155,6 +1245,7 @@ const RulesManagement: React.FC = () => {
                       severity: "warning",
                       message: "",
                       isActive: true,
+                      cooldownSeconds: 0,
                     });
                   }}
                   className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
