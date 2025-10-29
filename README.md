@@ -70,6 +70,60 @@ npm install
 npm run dev
 ```
 
+## IoT – Lokal körning och seed
+
+Följ stegen nedan för att starta Innovia Hub IoT‑tjänster lokalt och (valfritt) seeda 10 standardenheter i DeviceRegistry.
+
+1. DeviceRegistry.Api (med valfri seed av 10 enheter)
+
+PowerShell (Windows):
+
+```
+# Gå till tjänstens katalog
+cd ..\innovia-iot\src\DeviceRegistry.Api
+
+# (Valfritt) aktivera seed – skapar tenant "innovia" och 10 enheter (dev-101..dev-110)
+$env:DEVICE_REGISTRY_SEED = "true"
+$env:SEED_TENANT_SLUG = "innovia"
+$env:SEED_TENANT_NAME = "Innovia"
+
+# Starta tjänsten
+dotnet run
+```
+
+Verifiera via Swagger: `http://localhost:5101/swagger`
+
+- Hämta tenant: `GET /api/tenants/by-slug/innovia`
+- Lista enheter: `GET /api/tenants/{tenantId}/devices`
+
+2. MQTT‑broker (Mosquitto)
+
+- Se projektets IoT‑README för docker‑compose/startinstruktioner: `../innovia-iot/README.md`
+- Kör lokalt på `localhost:1883`.
+
+3. Edge.Simulator (läser enheter dynamiskt från DeviceRegistry)
+
+PowerShell (Windows):
+
+```
+cd ..\innovia-iot\src\Edge.Simulator
+dotnet run
+```
+
+Simulatorn:
+
+- Hämtar tenant `innovia` och enheter från DeviceRegistry.
+- Publicerar mätvärden för enheter med `Status=active` ungefär var 10:e sekund via MQTT.
+
+4. Realtime.Hub, Ingest.Gateway, Portal.Adapter
+
+- Starta respektive tjänst enligt `../innovia-iot/README.md` (SignalR‑hub, ingest och adapter‑API).
+
+5. Frontend (visning i portalen)
+
+- IoT Dashboard: `http://localhost:5173/admin/iot-dashboard`
+- Enheter från DeviceRegistry listas, och senaste mätvärden visas i realtid.
+
 ## Användare
 
 För att boka måste du logga in. <br />
