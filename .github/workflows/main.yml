@@ -9,6 +9,7 @@ on:
       - "backend/**"
       - "InnoviaHub_Grupp5.sln"
       - ".github/workflows/main.yml"
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -37,17 +38,27 @@ jobs:
 
       # 5. Run tests (optional, can be skipped if tests fail)
       - name: Test
-        run: dotnet test backend.Tests --configuration Release --no-build --verbosity normal
+        run: dotnet test backend.Tests/backend.Tests.csproj --configuration Release --no-build --verbosity normal
         continue-on-error: true
 
       # 6. Publish project (creates a package for deployment)
       - name: Publish
-        run: dotnet publish backend/backend.csproj -c Release -o ./backend/publish
+        run: dotnet publish backend/backend.csproj -c Release -o ./publish --no-build
 
-      # 7. Deploy to Azure Web App
+      # 7. List published files (for debugging)
+      - name: List published files
+        run: |
+          echo "Published files:"
+          ls -la ./publish/
+          echo "---"
+          echo "wwwroot files:"
+          ls -la ./publish/wwwroot/ 2>/dev/null || echo "No wwwroot directory"
+
+      # 8. Deploy to Azure Web App
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
         with:
           app-name: "InnoviaHub"
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
-          package: ./backend/publish
+          package: ./publish
+          startup-command: "dotnet backend.dll"
