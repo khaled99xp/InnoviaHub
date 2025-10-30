@@ -14,6 +14,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for Azure federated credentials
+      contents: read # Required for actions/checkout
     env:
       DOTNET_ENVIRONMENT: CI
 
@@ -54,11 +57,17 @@ jobs:
           echo "wwwroot files:"
           ls -la ./publish/wwwroot/ 2>/dev/null || echo "No wwwroot directory"
 
-      # 8. Deploy to Azure Web App
+      # 8. Login to Azure
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_02EE843DE02E4178BC50AA77A306E28A }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_29E680B20C714CBA989E142D2F9D8DBB }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C79FB9F745FD4475B75EBD4C3FEC25D1 }}
+
+      # 9. Deploy to Azure Web App
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
         with:
           app-name: "InnoviaHub"
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: ./publish
-          startup-command: "dotnet backend.dll"
