@@ -52,6 +52,7 @@ const DeviceAnalytics: React.FC = () => {
   const [analytics, setAnalytics] = useState<DeviceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchDeviceAnalytics = useCallback(async () => {
@@ -122,7 +123,28 @@ const DeviceAnalytics: React.FC = () => {
       setAnalytics(analyticsData);
       setLastUpdated(new Date());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      // Offline/failed: provide graceful fallback analytics
+      setIsOffline(true);
+      setError(null);
+      setAnalytics({
+        totalDevices: 0,
+        onlineDevices: 0,
+        offlineDevices: 0,
+        activeAlerts: 0,
+        averageTemperature: 0,
+        averageCO2: 0,
+        averageHumidity: 0,
+        deviceTypes: {
+          temperature: 0,
+          co2: 0,
+          humidity: 0,
+          voc: 0,
+          occupancy: 0,
+          door: 0,
+          energy: 0,
+          power: 0,
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -238,17 +260,6 @@ const DeviceAnalytics: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="text-center">
-          <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!analytics) return null;
 
   return (
@@ -258,6 +269,16 @@ const DeviceAnalytics: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900">
             Device Analytics
           </h2>
+          {isOffline && (
+            <div className="mt-2 bg-yellow-50 border-l-4 border-yellow-400 p-2">
+              <div className="flex items-start">
+                <AlertTriangle className="w-4 h-4 text-yellow-600 mr-2 flex-shrink-0" />
+                <p className="text-yellow-800 text-xs sm:text-sm">
+                  IoT server is currently offline. Showing zero values until services are available again.
+                </p>
+              </div>
+            </div>
+          )}
           {lastUpdated && (
             <p className="text-xs text-gray-500 mt-1">
               Last updated: {lastUpdated.toLocaleTimeString()}

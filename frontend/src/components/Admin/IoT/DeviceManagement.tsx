@@ -33,6 +33,7 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isServerOffline, setIsServerOffline] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [formData, setFormData] = useState({
@@ -48,6 +49,7 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
   const fetchDevices = async () => {
     try {
       setLoading(true);
+      setIsServerOffline(false);
 
       // Get tenant info
       const tenantResponse = await fetch(
@@ -68,7 +70,10 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
       const devicesData: Device[] = await devicesResponse.json();
       setDevices(devicesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      // IoT backend offline: present a graceful degraded state without throwing errors
+      setIsServerOffline(true);
+      setDevices([]);
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -245,18 +250,25 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
         </h2>
         <button
           onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+            isServerOffline
+              ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+              : "bg-blue-600 text-white hover:bg-blue-700"
+          }`}
+          disabled={isServerOffline}
         >
           <Plus className="w-4 h-4" />
           <span>Add Device</span>
         </button>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+      {isServerOffline && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center space-x-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            <p className="text-red-700">{error}</p>
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <p className="text-yellow-800">
+              IoT server is currently offline. Devices are unavailable and will be shown as offline. You can continue using the platform; please try again later.
+            </p>
           </div>
         </div>
       )}
@@ -321,7 +333,12 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
             <div className="flex items-center space-x-4">
               <button
                 type="submit"
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  isServerOffline
+                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                    : "bg-green-600 text-white hover:bg-green-700"
+                }`}
+                disabled={isServerOffline}
               >
                 <Save className="w-4 h-4" />
                 <span>Save Device</span>
@@ -379,10 +396,13 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
               <button
                 onClick={() => handleToggleStatus(device)}
                 className={`p-2 rounded-lg transition-colors ${
-                  device.status === "active"
+                  isServerOffline
+                    ? "text-gray-400 cursor-not-allowed"
+                    : device.status === "active"
                     ? "text-red-600 hover:bg-red-50"
                     : "text-green-600 hover:bg-green-50"
                 }`}
+                disabled={isServerOffline}
                 title={device.status === "active" ? "Deactivate" : "Activate"}
               >
                 {device.status === "active" ? (
@@ -394,7 +414,12 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
 
               <button
                 onClick={() => startEditing(device)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className={`p-2 rounded-lg transition-colors ${
+                  isServerOffline
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-blue-600 hover:bg-blue-50"
+                }`}
+                disabled={isServerOffline}
                 title="Edit Device"
               >
                 <Edit className="w-4 h-4" />
@@ -402,7 +427,12 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
 
               <button
                 onClick={() => handleDeleteDevice(device.id)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className={`p-2 rounded-lg transition-colors ${
+                  isServerOffline
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-red-600 hover:bg-red-50"
+                }`}
+                disabled={isServerOffline}
                 title="Delete Device"
               >
                 <Trash2 className="w-4 h-4" />
@@ -411,10 +441,17 @@ const DeviceManagement: React.FC<DeviceManagementProps> = ({
           </div>
         ))}
 
-        {devices.length === 0 && (
+        {devices.length === 0 && !isServerOffline && (
           <div className="text-center py-8">
             <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
             <p className="text-gray-500">No devices found</p>
+          </div>
+        )}
+
+        {devices.length === 0 && isServerOffline && (
+          <div className="text-center py-8">
+            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-2" />
+            <p className="text-gray-700">IoT server offline — devices unavailable.</p>
           </div>
         )}
       </div>

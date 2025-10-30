@@ -5,9 +5,11 @@ import type { DashboardStats } from "../../../../types/admin";
 
 interface StatsCardsProps {
   dashboardStats?: DashboardStats;
+  isIoTOffline?: boolean;
+  iotDevicesCount?: number;
 }
 
-const StatsCards: React.FC<StatsCardsProps> = ({ dashboardStats }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ dashboardStats, isIoTOffline, iotDevicesCount }) => {
   // Use real data if available, otherwise fallback to mock data
   const stats = [
     {
@@ -39,12 +41,17 @@ const StatsCards: React.FC<StatsCardsProps> = ({ dashboardStats }) => {
     },
     {
       title: "IoT Devices",
-      value: "10",
-      change: "Online",
-      changeType: "positive" as const,
+      value:
+        typeof iotDevicesCount === "number"
+          ? iotDevicesCount.toString()
+          : isIoTOffline
+          ? "0"
+          : "—",
+      change: isIoTOffline ? "Offline" : "—",
+      changeType: (isIoTOffline ? "negative" : "neutral") as const,
       icon: MdDevices,
       color: "purple" as const,
-      description: "Connected sensors",
+      description: isIoTOffline ? "Sensors unavailable" : "No IoT data available",
     },
   ];
 

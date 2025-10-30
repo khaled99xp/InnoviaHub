@@ -59,6 +59,7 @@ const RulesManagement: React.FC = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isServerOffline, setIsServerOffline] = useState(false);
   const [showAddRule, setShowAddRule] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
 
@@ -176,6 +177,7 @@ const RulesManagement: React.FC = () => {
   // Fetch devices from DeviceRegistry
   const fetchDevices = async () => {
     try {
+      setIsServerOffline(false);
       console.log("Fetching tenant...");
       const tenantResponse = await fetch(
         "http://localhost:5101/api/tenants/by-slug/innovia"
@@ -202,11 +204,9 @@ const RulesManagement: React.FC = () => {
       setDevices(devicesData);
     } catch (err) {
       console.error("Error fetching devices:", err);
-      setError(
-        `Failed to fetch devices: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
+      setIsServerOffline(true);
+      setDevices([]);
+      setError(null);
     }
   };
 
@@ -237,6 +237,7 @@ const RulesManagement: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching rules:", err);
+      setIsServerOffline(true);
     }
   };
 
@@ -279,6 +280,7 @@ const RulesManagement: React.FC = () => {
       }
     } catch (err) {
       console.error("Error fetching alerts:", err);
+      setIsServerOffline(true);
     }
   };
 
@@ -704,6 +706,16 @@ const RulesManagement: React.FC = () => {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {isServerOffline && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 sm:p-4">
+          <div className="flex items-start">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+            <p className="text-yellow-800 text-sm sm:text-base">
+              IoT server is currently offline. The platform is operational, but rules and alerts cannot be retrieved. Please try again later.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -776,7 +788,7 @@ const RulesManagement: React.FC = () => {
       )}
 
       {/* Tab Content */}
-      {activeTab === "rules" && (
+        {activeTab === "rules" && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
@@ -788,10 +800,11 @@ const RulesManagement: React.FC = () => {
             {rules.length === 0 ? (
               <div className="text-center py-8">
                 <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No rules configured</p>
+                <p className="text-gray-500">{isServerOffline ? "IoT server offline — rules unavailable." : "No rules configured"}</p>
                 <button
                   onClick={() => setShowAddRule(true)}
-                  className="mt-4 text-blue-600 hover:text-blue-700"
+                  className={`mt-4 ${isServerOffline ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:text-blue-700"}`}
+                  disabled={isServerOffline}
                 >
                   Create your first rule
                 </button>
@@ -828,18 +841,16 @@ const RulesManagement: React.FC = () => {
                         </span>
                         <button
                           onClick={() => openEditRule(rule)}
-                          className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                          className={`p-1 rounded transition-colors ${isServerOffline ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:bg-blue-100"}`}
+                          disabled={isServerOffline}
                           title="Edit Rule"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => toggleRuleStatus(rule)}
-                          className={`p-1 rounded transition-colors ${
-                            rule.enabled
-                              ? "text-red-600 hover:bg-red-100"
-                              : "text-green-600 hover:bg-green-100"
-                          }`}
+                          className={`p-1 rounded transition-colors ${isServerOffline ? "text-gray-400 cursor-not-allowed" : rule.enabled ? "text-red-600 hover:bg-red-100" : "text-green-600 hover:bg-green-100"}`}
+                          disabled={isServerOffline}
                           title={rule.enabled ? "Disable Rule" : "Enable Rule"}
                         >
                           {rule.enabled ? (
@@ -850,7 +861,8 @@ const RulesManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => deleteRule(rule.id)}
-                          className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                          className={`p-1 rounded transition-colors ${isServerOffline ? "text-gray-400 cursor-not-allowed" : "text-red-600 hover:bg-red-100"}`}
+                          disabled={isServerOffline}
                           title="Delete Rule"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -898,7 +910,8 @@ const RulesManagement: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={deleteSelectedAlerts}
-                      className="flex items-center space-x-1 px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"
+                      className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm transition-colors ${isServerOffline ? "bg-gray-300 text-gray-600 cursor-not-allowed" : "bg-red-600 text-white hover:bg-red-700"}`}
+                      disabled={isServerOffline}
                     >
                       <Trash2 className="w-4 h-4" />
                       <span>Delete ({selectedAlerts.length})</span>
@@ -919,11 +932,7 @@ const RulesManagement: React.FC = () => {
             {getFilteredAlerts().length === 0 ? (
               <div className="text-center py-8">
                 <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  {sensorTypeFilter === "all"
-                    ? "No alerts triggered"
-                    : `No ${sensorTypeFilter} alerts`}
-                </p>
+                <p className="text-gray-500">{isServerOffline ? "IoT server offline — alerts unavailable." : sensorTypeFilter === "all" ? "No alerts triggered" : `No ${sensorTypeFilter} alerts`}</p>
               </div>
             ) : (
               <>

@@ -54,10 +54,10 @@ interface DeviceData {
 
 const IoTDashboard: React.FC = () => {
   const [devices, setDevices] = useState<DeviceData[]>([]);
-  const [connection, setConnection] = useState<HubConnection | null>(null);
+  // Live connection is managed inside effects to avoid dependency churn
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Avoid fatal error screen; show offline banner instead
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"dashboard" | "management">(
@@ -89,6 +89,13 @@ const IoTDashboard: React.FC = () => {
       console.error(`Failed to fetch history for device ${deviceId}:`, err);
       return {};
     }
+  };
+
+  // Determine if a timestamp is recent (within 45 seconds)
+  const isRecent = (isoTime?: string) => {
+    if (!isoTime) return false;
+    const dt = new Date(isoTime).getTime();
+    return Date.now() - dt <= 45 * 1000;
   };
 
   // Fetch devices from DeviceRegistry
@@ -126,8 +133,14 @@ const IoTDashboard: React.FC = () => {
 
       const deviceData = await Promise.all(deviceDataPromises);
       setDevices(deviceData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+    } catch {
+      // When backend services are down, mark all existing devices as offline and avoid error screens
+      setDevices((prev) =>
+        prev.map((d) => ({
+          ...d,
+          isOnline: false,
+        }))
+      );
     } finally {
       setLoading(false);
     }
@@ -153,6 +166,7 @@ const IoTDashboard: React.FC = () => {
 
   // Setup SignalR connection
   useEffect(() => {
+    let localConnection: HubConnection | null = null;
     const setupConnection = async () => {
       try {
         const newConnection = new HubConnectionBuilder()
@@ -160,33 +174,36 @@ const IoTDashboard: React.FC = () => {
           .withAutomaticReconnect()
           .build();
 
-        newConnection.on("measurementReceived", (measurement: Measurement) => {
+        const handleIncomingMeasurement = (measurement: Measurement) => {
+          if (!measurement || !measurement.deviceId) return;
           console.log("Received measurement:", measurement);
           setDevices((prevDevices) => {
             return prevDevices.map((deviceData) => {
-              if (deviceData.device.id === measurement.deviceId) {
-                // Update latest measurement
+              // Some hubs may send serial instead of GUID. Accept either match.
+              const matchesDevice =
+                deviceData.device.id === measurement.deviceId ||
+                deviceData.device.serial === (measurement as any).deviceSerial;
+              if (matchesDevice) {
                 const updatedLatestMeasurements = {
                   ...deviceData.latestMeasurements,
                   [measurement.type]: measurement,
                 };
 
-                // Update measurement history
                 const updatedHistory = { ...deviceData.measurementHistory };
                 if (!updatedHistory[measurement.type]) {
                   updatedHistory[measurement.type] = [];
                 }
 
-                // Check if this measurement already exists (same time, value, and device)
                 const existingHistory = updatedHistory[measurement.type];
                 const isDuplicate = existingHistory.some(
                   (m) =>
                     m.time === measurement.time &&
                     m.value === measurement.value &&
-                    m.deviceId === measurement.deviceId
+                    (m.deviceId === measurement.deviceId ||
+                      (m as any).deviceSerial ===
+                        (measurement as any).deviceSerial)
                 );
 
-                // Only add if not duplicate
                 if (!isDuplicate) {
                   updatedHistory[measurement.type] = [
                     measurement,
@@ -204,11 +221,21 @@ const IoTDashboard: React.FC = () => {
               return deviceData;
             });
           });
-        });
+        };
+
+        // Subscribe to multiple possible event names from the hub
+        newConnection.on("measurementReceived", handleIncomingMeasurement);
+        newConnection.on("telemetryReceived", handleIncomingMeasurement);
+        newConnection.on("measurement", handleIncomingMeasurement);
+        newConnection.on("telemetry", handleIncomingMeasurement);
 
         newConnection.on("alertRaised", (alert: Alert) => {
           setAlerts((prevAlerts) => [alert, ...prevAlerts.slice(0, 9)]); // Keep last 10 alerts
           console.log("Alert received:", alert);
+        });
+
+        newConnection.onreconnected(() => {
+          setIsConnected(true);
         });
 
         newConnection.onclose(() => {
@@ -225,19 +252,25 @@ const IoTDashboard: React.FC = () => {
         await newConnection.start();
         await newConnection.invoke("JoinTenant", "innovia");
 
-        setConnection(newConnection);
+        localConnection = newConnection;
         setIsConnected(true);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Connection failed");
+      } catch {
+        // Connection failure: reflect disconnected state and mark devices offline, but no fatal UI error
         setIsConnected(false);
+        setDevices((prevDevices) =>
+          prevDevices.map((deviceData) => ({
+            ...deviceData,
+            isOnline: false,
+          }))
+        );
       }
     };
 
     setupConnection();
 
     return () => {
-      if (connection) {
-        connection.stop();
+      if (localConnection) {
+        localConnection.stop();
       }
     };
   }, []);
@@ -246,6 +279,59 @@ const IoTDashboard: React.FC = () => {
   useEffect(() => {
     fetchDevices();
   }, [fetchDevices]);
+
+  // Polling fallback: periodically refresh latest measurements via REST in case SignalR events are missed
+  useEffect(() => {
+    if (devices.length === 0) return;
+    let isCancelled = false;
+    const refreshAll = async () => {
+      try {
+        const updated = await Promise.all(
+          devices.map(async (dd) => {
+            try {
+              const resp = await fetch(
+                `http://localhost:5104/api/devices/${dd.device.id}/measurements?limit=1`
+              );
+              if (!resp.ok) return dd;
+              const list: Measurement[] = await resp.json();
+              if (!list || list.length === 0) return dd;
+              const m = list[0];
+              const updatedLatest = { ...dd.latestMeasurements, [m.type]: m };
+              const updatedHistory = { ...dd.measurementHistory };
+              if (!updatedHistory[m.type]) updatedHistory[m.type] = [];
+              const exists = updatedHistory[m.type].some(
+                (x) => x.time === m.time && x.value === m.value
+              );
+              if (!exists) {
+                updatedHistory[m.type] = [m, ...updatedHistory[m.type]].slice(
+                  0,
+                  10
+                );
+              }
+              return {
+                ...dd,
+                latestMeasurements: updatedLatest,
+                measurementHistory: updatedHistory,
+                isOnline: isRecent(m.time) && dd.deviceStatus === "active",
+              } as typeof dd;
+            } catch {
+              return dd;
+            }
+          })
+        );
+        if (!isCancelled) setDevices(updated);
+      } catch {
+        // ignore
+      }
+    };
+    const id = setInterval(refreshAll, 5000);
+    // also run immediately once
+    refreshAll();
+    return () => {
+      isCancelled = true;
+      clearInterval(id);
+    };
+  }, [devices.length]);
 
   const getMeasurementIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -365,28 +451,21 @@ const IoTDashboard: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            Loading Error
-          </h2>
-          <p className="text-gray-600">{error}</p>
-          <button
-            onClick={fetchDevices}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // No fatal error screen; keep rendering with offline state
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {!isConnected && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 sm:p-4">
+          <div className="flex items-start">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+            <p className="text-yellow-800 text-sm sm:text-base">
+              IoT server is currently offline. The platform is operational, but
+              live telemetry can’t be retrieved. Please try again later.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

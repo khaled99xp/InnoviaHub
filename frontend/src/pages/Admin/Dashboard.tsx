@@ -1,4 +1,5 @@
 import React from "react";
+import { AlertTriangle } from "lucide-react";
 import { useDashboardStats } from "../../hooks/useApi";
 import StatsCards from "../../components/Admin/Dashboard/StatsCards/StatsCards";
 import DeviceAnalytics from "../../components/Admin/Dashboard/DeviceAnalytics";
@@ -19,30 +20,22 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Failed to load dashboard
-          </h2>
-          <p className="text-gray-600 mb-4">
-            {error instanceof Error ? error.message : "An error occurred"}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
+  // Graceful offline: show a non-blocking banner instead of a full error page
+  const offlineBanner = error ? (
+    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 sm:p-4 mb-4">
+      <div className="flex items-start">
+        <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+        <p className="text-yellow-800 text-sm sm:text-base">
+          Some services are currently offline. The platform remains operational,
+          but certain dashboard data may be unavailable. Please try again later.
+        </p>
       </div>
-    );
-  }
+    </div>
+  ) : null;
 
   return (
     <div className="space-y-6">
+      {offlineBanner}
       {/* Page Header */}
       <div>
         <div className="flex items-center justify-between">
@@ -58,7 +51,7 @@ const Dashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <div>
-        <StatsCards dashboardStats={dashboardStats} />
+        <StatsCards dashboardStats={dashboardStats} isIoTOffline={!!error} />
       </div>
 
       {/* Device Analytics */}
