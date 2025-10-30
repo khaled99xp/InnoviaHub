@@ -4,8 +4,11 @@ on:
   push:
     branches:
       - main
+      - dev
     paths:
-      - "backend/**"   # Only run when backend code changes
+      - "backend/**"
+      - "InnoviaHub_Grupp5.sln"
+      - ".github/workflows/main.yml"
 
 jobs:
   build-and-deploy:
@@ -16,33 +19,35 @@ jobs:
     steps:
       # 1. Get the code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2. Setup .NET
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: "9.0"
 
-      # 3. Go to backend folder and restore dependencies
+      # 3. Restore dependencies
       - name: Restore dependencies
-        run: dotnet restore
-        working-directory: ./backend
+        run: dotnet restore InnoviaHub_Grupp5.sln
 
       # 4. Build the backend
       - name: Build
-        run: dotnet build backend.sln --configuration Release --no-restore
-        working-directory: ./backend
+        run: dotnet build InnoviaHub_Grupp5.sln --configuration Release --no-restore
 
-      # 5. Publish project (creates a package for deployment)
+      # 5. Run tests (optional, can be skipped if tests fail)
+      - name: Test
+        run: dotnet test backend.Tests --configuration Release --no-build --verbosity normal
+        continue-on-error: true
+
+      # 6. Publish project (creates a package for deployment)
       - name: Publish
-        run: dotnet publish -c Release -o ./publish
-        working-directory: ./backend
+        run: dotnet publish backend/backend.csproj -c Release -o ./backend/publish
 
-      # 6. Deploy to Azure Web App
+      # 7. Deploy to Azure Web App
       - name: Deploy to Azure WebApp
-        uses: azure/webapps-deploy@v2
+        uses: azure/webapps-deploy@v3
         with:
-          app-name: "backend20250920090759"
+          app-name: "InnoviaHub"
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: ./backend/publish
