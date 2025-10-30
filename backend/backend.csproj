@@ -6,10 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
    
-  <PropertyGroup Condition="'$(DOTNET_ENVIRONMENT)' != 'CI'">
-		<OpenApiGenerateDocuments>true</OpenApiGenerateDocuments>
-		<OpenApiDocumentsDirectory>$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
-	</PropertyGroup>
+  <PropertyGroup>
+    <!-- Disable OpenAPI generation in CI to avoid database connection during build -->
+    <OpenApiGenerateDocuments Condition="'$(DOTNET_ENVIRONMENT)' != 'CI' AND '$(ASPNETCORE_ENVIRONMENT)' != 'CI'">true</OpenApiGenerateDocuments>
+    <OpenApiGenerateDocuments Condition="'$(DOTNET_ENVIRONMENT)' == 'CI' OR '$(ASPNETCORE_ENVIRONMENT)' == 'CI'">false</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory Condition="'$(OpenApiGenerateDocuments)' == 'true'">$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="15.0.1" />

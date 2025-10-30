@@ -35,9 +35,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore InnoviaHub_Grupp5.sln
 
-      # 4. Build the backend
+      # 4. Build the backend (skip OpenAPI generation in CI)
       - name: Build
-        run: dotnet build InnoviaHub_Grupp5.sln --configuration Release --no-restore
+        run: dotnet build InnoviaHub_Grupp5.sln --configuration Release --no-restore /p:OpenApiGenerateDocuments=false
 
       # 5. Run tests (optional, can be skipped if tests fail)
       - name: Test
@@ -46,7 +46,7 @@ jobs:
 
       # 6. Publish project (creates a package for deployment)
       - name: Publish
-        run: dotnet publish backend/backend.csproj -c Release -o ./publish --no-build
+        run: dotnet publish backend/backend.csproj -c Release -o ./publish --no-build /p:OpenApiGenerateDocuments=false
 
       # 7. List published files (for debugging)
       - name: List published files
