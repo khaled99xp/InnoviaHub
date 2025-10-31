@@ -7,7 +7,7 @@ spec:
       environment_slug: dotnet
       instance_count: 1
       instance_size_slug: basic-xxs
-      run_command: "dotnet /workspace/backend/out/backend.dll"
+      run_command: "dotnet out/backend.dll"
       build_command: "dotnet publish -c Release -o out /p:OpenApiGenerateDocuments=false"
       routes:
         - path: "/api"
@@ -63,7 +63,7 @@ spec:
       instance_count: 1
       instance_size_slug: basic-xxs
       build_command: "npm ci && npm run build"
-      run_command: "npx serve -s dist -l 8080"
+      run_command: "npm start"
       http_port: 8080
       routes:
         - path: "/"
