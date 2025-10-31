@@ -58,14 +58,14 @@ services:
         value: ${FRONTEND_ORIGIN}
         scope: RUN_TIME
 
-static_sites:
   - name: frontend
     git:
       repo_clone_url: https://github.com/khaled99xp/InnoviaHub.git
       branch: main
-    source_dir: frontend
-    build_command: npm install && npm run build
-    output_dir: dist
+    dockerfile_path: frontend/Dockerfile
+    http_port: 80
+    instance_count: 1
+    instance_size_slug: basic-xxs
     routes:
       - path: "/"
     envs:
