@@ -7,27 +7,15 @@ ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
 ENV NODE_ENV=production
 ENV CI=false
 
-# Install dependencies with verbose output
+# Install dependencies
 COPY frontend/package*.json ./
-RUN npm ci --legacy-peer-deps --verbose || \
-    (echo "npm ci failed, trying npm install..." && \
-     npm install --legacy-peer-deps --verbose)
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Copy source code
 COPY frontend/ ./
 
-# Verify files are present
-RUN ls -la && \
-    echo "Package.json content:" && \
-    cat package.json | head -20
-
-# Build with detailed error output
-RUN echo "=== Starting build process ===" && \
-    npm run build || \
-    (echo "✗ npm run build failed, attempting direct vite build..." && \
-     npx vite build) && \
-    echo "✓ Build completed!" && \
-    ls -la dist/
+# Build the application with verbose output
+RUN npm run build 2>&1 || (echo "Build failed with exit code: $?" && exit 1)
 
 FROM nginx:alpine
 
