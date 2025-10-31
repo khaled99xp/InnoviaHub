@@ -224,12 +224,10 @@ if (string.IsNullOrEmpty(runtimeJwtSecret))
         "or as an environment variable in production.");
 }
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+
     app.MapOpenApi();
     app.MapScalarApiReference();
-}
+
 
 // Apply EF Core migrations automatically on startup (Production-safe)
 try
