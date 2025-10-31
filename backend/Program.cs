@@ -22,6 +22,26 @@ builder.Services.AddOpenApi();
 builder.Configuration
     .AddEnvironmentVariables();
 
+// Debug: Log configuration values (only connection string info, not secrets)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtSecretKeyLength = builder.Configuration["Jwt:SecretKey"]?.Length ?? 0;
+
+Console.WriteLine($"[Config] ConnectionString exists: {!string.IsNullOrEmpty(connectionString)}");
+Console.WriteLine($"[Config] ConnectionString starts with: {(connectionString?.Substring(0, Math.Min(20, connectionString?.Length ?? 0)) ?? "NULL")}");
+Console.WriteLine($"[Config] JWT Issuer: {jwtIssuer ?? "NULL"}");
+Console.WriteLine($"[Config] JWT SecretKey length: {jwtSecretKeyLength}");
+
+// Validate required configuration
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("ConnectionString 'DefaultConnection' is not configured. Please set ConnectionStrings__DefaultConnection in Azure App Service.");
+}
+
+if (string.IsNullOrEmpty(builder.Configuration["Jwt:SecretKey"]))
+{
+    throw new InvalidOperationException("JWT SecretKey is not configured. Please set Jwt__SecretKey in Azure App Service.");
+}
 
 // Add services to the container.
 builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
@@ -81,19 +101,25 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Cors implementation for frontend
+// Cors implementation (configurable via configuration/env)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy.WithOrigins(
-            "http://localhost:5173",    // development
-            "http://localhost:3000",   // alternative dev port
-            "https://innovia-hub.netlify.app"   // production
-            )
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        var configuredOrigins = builder.Configuration["Cors:AllowedOrigins"];
+
+        string[] origins;
+        if (!string.IsNullOrWhiteSpace(configuredOrigins))
+            origins = configuredOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        else if (builder.Environment.IsDevelopment())
+            origins = new[] { "http://localhost:5173", "http://localhost:3000" };
+        else
+            origins = Array.Empty<string>();
+
+        if (origins.Length > 0)
+            policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        else
+            policy.AllowAnyHeader().AllowAnyMethod();
     });
 });
 

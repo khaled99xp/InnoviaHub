@@ -71,3 +71,27 @@ jobs:
         with:
           app-name: "InnoviaHub"
           package: ./publish
+
+      # 10. Get Connection String from Azure App Service
+      - name: Get Connection String
+        id: get-connection-string
+        run: |
+          CONNECTION_STRING=$(az webapp config connection-string show \
+            --name InnoviaHub \
+            --resource-group $(az webapp show --name InnoviaHub --query resourceGroup -o tsv) \
+            --connection-string-type Custom \
+            --name ConnectionStrings__DefaultConnection \
+            --query "[].value" -o tsv)
+          echo "connection_string=$CONNECTION_STRING" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      # 11. Run Entity Framework Migrations
+      - name: Run Database Migrations
+        continue-on-error: true
+        run: |
+          if [ -n "${{ steps.get-connection-string.outputs.connection_string }}" ]; then
+            export ConnectionStrings__DefaultConnection="${{ steps.get-connection-string.outputs.connection_string }}"
+            dotnet ef database update --project backend/backend.csproj --no-build
+          else
+            echo "Connection string not found, skipping migrations"
+          fi
