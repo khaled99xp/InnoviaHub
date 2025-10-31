@@ -1,0 +1,36 @@
+name: Deploy to DigitalOcean App Platform
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.do/app.yaml'
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/deploy-digitalocean.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_API_TOKEN }}
+
+      - name: Validate spec
+        run: doctl apps spec validate .do/app.yaml
+
+      - name: Create or update app
+        run: |
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')
+          if [ -z "$APP_ID" ]; then
+            doctl apps create --spec .do/app.yaml --wait
+          else
+            doctl apps update $APP_ID --spec .do/app.yaml --wait
+          fi
+
+
