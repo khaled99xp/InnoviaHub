@@ -21,6 +21,19 @@ jobs:
         with:
           token: ${{ secrets.DO_API_TOKEN }}
 
+      - name: Validate app spec
+        run: |
+          echo "=== App Spec Content ==="
+          cat .do/app.yaml
+          echo "=== Checking for cluster_name ==="
+          if grep -q "cluster_name" .do/app.yaml; then
+            echo "ERROR: cluster_name found in app.yaml!"
+            grep -n "cluster_name" .do/app.yaml
+            exit 1
+          else
+            echo "✓ No cluster_name found - OK"
+          fi
+
       - name: Create or update app
         run: |
           APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')

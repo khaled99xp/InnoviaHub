@@ -76,9 +76,7 @@ static_sites:
 databases:
   - name: innoviahub-db
     engine: MYSQL
-    production: true
     version: "8"
-    db_name: InnoviaHubDB
-    db_user: app_user
+    production: true
 
 
