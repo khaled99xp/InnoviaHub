@@ -6,9 +6,9 @@ ENV ASPNETCORE_URLS=http://0.0.0.0:8080
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["backend/backend.csproj", "backend/"]
-RUN dotnet restore "backend/backend.csproj"
-COPY backend/ backend/
+COPY ["backend/backend.csproj", "./"]
+RUN dotnet restore "backend.csproj"
+COPY . .
 WORKDIR "/src/backend"
 RUN dotnet build "backend.csproj" -c $BUILD_CONFIGURATION -o /app/build /p:OpenApiGenerateDocuments=false
 
