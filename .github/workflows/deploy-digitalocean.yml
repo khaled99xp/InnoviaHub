@@ -27,12 +27,14 @@ jobs:
           cat .do/app.yaml
           echo "=== Validation complete ==="
 
-      - name: Create MySQL cluster if not exists
+      - name: Setup MySQL database
         run: |
           if doctl databases cluster list --format Name --no-header | grep -q "innoviahub-mysql-cluster"; then
             echo "MySQL cluster already exists"
+            CLUSTER_ID=$(doctl databases cluster list --format ID,Name --no-header | awk '$2=="innoviahub-mysql-cluster" {print $1}')
+            echo "Using existing cluster: $CLUSTER_ID"
           else
-            echo "Creating MySQL cluster..."
+            echo "Creating MySQL cluster (this may take 5-10 minutes)..."
             doctl databases cluster create innoviahub-mysql-cluster \
               --engine mysql \
               --version "8" \
@@ -40,7 +42,25 @@ jobs:
               --size db-s-1vcpu-1gb \
               --num-nodes 1 \
               --wait
+            CLUSTER_ID=$(doctl databases cluster list --format ID,Name --no-header | awk '$2=="innoviahub-mysql-cluster" {print $1}')
+            echo "Cluster created: $CLUSTER_ID"
           fi
+          
+          # Wait for cluster to be fully online
+          echo "Checking cluster status..."
+          for i in {1..30}; do
+            STATUS=$(doctl databases cluster get $CLUSTER_ID --format Status --no-header 2>/dev/null || echo "creating")
+            echo "Attempt $i: Cluster status is '$STATUS'"
+            if [ "$STATUS" = "online" ]; then
+              echo "✓ Cluster is online and ready!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "⚠ Cluster not fully online yet, but proceeding anyway"
+            fi
+            sleep 10
+          done
+          echo "CLUSTER_ID=$CLUSTER_ID" >> $GITHUB_ENV
 
       - name: Create or update app
         run: |

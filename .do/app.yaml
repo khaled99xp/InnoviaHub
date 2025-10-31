@@ -80,4 +80,3 @@ databases:
     production: true
     cluster_name: innoviahub-mysql-cluster
 
-
