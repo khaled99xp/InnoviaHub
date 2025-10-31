@@ -1,6 +1,14 @@
-# Om
+# InnoviaHub - Avancerat Bokningssystem
 
-Detta projekt är ett avancerat bokningssystem för ett coworkingcenter med AI-integration. Användare kan boka skrivbord, mötesrum, VR-utrustning och AI-servrar med realtidsuppdatering och intelligenta rekommendationer.
+## Om projektet
+
+InnoviaHub är ett avancerat bokningssystem för ett coworkingcenter med AI-integration. Systemet möjliggör för användare att boka olika typer av resurser (skrivbord, mötesrum, VR-utrustning och AI-servrar) med realtidsuppdatering och intelligenta AI-drivna rekommendationer.
+
+### Deployad applikation
+
+🌐 **Applikation**: [https://shark-app-wjvir.ondigitalocean.app/](https://shark-app-wjvir.ondigitalocean.app/)
+
+Applikationen är deployad på DigitalOcean App Platform.
 
 # Teknisk information
 
@@ -48,12 +56,57 @@ Detta projekt är ett avancerat bokningssystem för ett coworkingcenter med AI-i
 - I strängen "DefaultConnection", ändra "User" till din connections användarnamn och "Password" till din connections lösenord.
 - Sätt en secretkey till minst 32 tecken.
 
-## AI-konfiguration
+## Miljövariabler och konfiguration
 
-- Lägg till din OpenAI API-nyckel i "appsettings.json" under "OpenAI.ApiKey"
-- AI-funktionalitet är valfri - systemet fungerar även utan OpenAI-nyckel
-- **AI Prompts**: Konfigurera AI-beteende genom att redigera `backend/Config/AIPrompts.json`
-- **Smart Filtering**: AI filtrerar automatiskt irrelevanta frågor och fokuserar på bokningsrelaterade ämnen
+### Databas
+
+Applikationen använder MySQL som databas. Konfigurera anslutningssträngen via miljövariabel:
+
+```bash
+ConnectionStrings__DefaultConnection="Server=localhost;Port=3306;Database=innoviahub;User=din_användare;Password=ditt_lösenord;"
+```
+
+**Alternativt** kan du konfigurera i `appsettings.json` för lokal utveckling (ej rekommenderat för produktion).
+
+### JWT Autentisering
+
+Konfigurera JWT-inställningar via miljövariabler:
+
+```bash
+Jwt__SecretKey="din_hemliga_nyckel_minst_32_tecken_lång"
+Jwt__Issuer="https://shark-app-wjvir.ondigitalocean.app"
+Jwt__Audience="https://shark-app-wjvir.ondigitalocean.app"
+Jwt__ExpirationMinutes=60
+```
+
+### AI-konfiguration (OpenAI)
+
+AI-funktionalitet är valfri - systemet fungerar även utan OpenAI-nyckel. För att aktivera AI-funktioner:
+
+```bash
+OpenAI__ApiKey="din-openai-api-nyckel"
+```
+
+**AI Prompts**: Konfigurera AI-beteende genom att redigera `backend/Config/AIPrompts.json`
+**Smart Filtering**: AI filtrerar automatiskt irrelevanta frågor och fokuserar på bokningsrelaterade ämnen
+
+### SignalR (Valfritt)
+
+För produktion kan du konfigurera en extern SignalR-tjänst om det behövs för skalbarhet:
+
+```bash
+Azure__SignalR__ConnectionString="din-signalr-connection-string"
+```
+
+Om inte konfigurerat används in-process SignalR (fungerar perfekt för lokal utveckling och mindre produktioner).
+
+### CORS-inställningar
+
+```bash
+Cors__AllowedOrigins="https://shark-app-wjvir.ondigitalocean.app,https://localhost:5173"
+```
+
+**OBS**: Se filen `ENV_VARIABLES.md` för en komplett guide över alla miljövariabler och hur de konfigureras.
 
 ## Starta applikationen
 
@@ -124,19 +177,70 @@ Simulatorn:
 - IoT Dashboard: `http://localhost:5173/admin/iot-dashboard`
 - Enheter från DeviceRegistry listas, och senaste mätvärden visas i realtid.
 
-## Användare
+## Testguide och inloggningsuppgifter
 
-För att boka måste du logga in. <br />
-Du kan skapa en ny användare eller med hjälp av standarduppgifterna. <br />
-Admins kan använda admin tools genom att gå in på [http://localhost:5173/admin](http://localhost:5173/admin) <br />
+### Hur man testar applikationen
 
-**Admin konto:** <br />
-**E-post: admin@innoviahub.com**, <br />
-**Lösenord: Admin123!**
+För att testa applikationen kan du använda följande steg:
 
-**Members konto:** <br />
-**E-post: member@innoviahub.com**, <br />
-**Lösenord: Member123!**
+1. **Öppna den deployade applikationen**: Navigera till [https://shark-app-wjvir.ondigitalocean.app/](https://shark-app-wjvir.ondigitalocean.app/)
+
+2. **Logga in med testkonton**:
+
+   - **Admin-konto** (fullständig åtkomst till alla funktioner):
+
+     - E-post: `admin@innoviahub.com`
+     - Lösenord: `Admin123!`
+
+   - **Medlemskonto** (standard användare):
+     - E-post: `member@innoviahub.com`
+     - Lösenord: `Member123!`
+
+3. **Alternativt**: Skapa ett nytt konto genom registreringsformuläret
+
+### Testscenarier
+
+#### För medlemmar (Members):
+
+- ✅ Logga in och utforska tillgängliga resurser
+- ✅ Skapa en ny bokning (skrivbord, mötesrum, VR-set eller AI-server)
+- ✅ Visa dina egna bokningar på "Mina Bokningar"-sidan
+- ✅ Avbryt en aktiv bokning
+- ✅ Använd AI Chat för att få rekommendationer
+- ✅ Testa betalningsflödet
+
+#### För administratörer (Admins):
+
+- ✅ Logga in på admin-panelen: `/admin`
+- ✅ Hantera resurser (skapa, uppdatera, ta bort)
+- ✅ Se alla bokningar i systemet
+- ✅ Använd AI Insights för att analysera bokningsmönster
+- ✅ Visa användarstatistik och rapporter
+- ✅ Hantera IoT-enheter (om IoT-funktionalitet är aktiverad)
+
+### Funktioner att testa
+
+**Realtidskommunikation (SignalR)**:
+
+- Öppna applikationen i två olika webbläsare/flikar
+- Logga in med olika konton
+- Skapa eller avbryt en bokning i en flik
+- Observera att uppdateringen syns omedelbart i den andra fliken utan siduppdatering
+
+**Bokningsflöde**:
+
+- Navigera till bokningssidan
+- Välj en resurs (t.ex. mötesrum)
+- Välj datum och tidslucka (FM: 08:00-12:00 eller EF: 12:00-16:00)
+- Bekräfta bokningen
+- Verifiera att bokningen visas i "Mina Bokningar"
+
+**AI-funktionalitet**:
+
+- Navigera till AI Chat (`/ai-chat`)
+- Ställ frågor om bokningar, tillgänglighet eller resurser
+- Be om rekommendationer baserat på dina behov
+- Testa smarta förslag när du skapar bokningar
 
 ## AI-funktioner
 
@@ -424,6 +528,86 @@ AI-systemet använder konfigurerbara prompts för att säkerställa relevanta sv
 - **Dynamic Configuration**: Ändra AI-beteende utan omstart av applikationen
 - **Keyword Management**: Konfigurera vilka ord som ska filtreras eller tillåtas
 
+## Driftsättning
+
+Applikationen är deployad på **DigitalOcean App Platform**:
+
+🌐 **Länk**: [https://shark-app-wjvir.ondigitalocean.app/](https://shark-app-wjvir.ondigitalocean.app/)
+
+### Deployment-miljö
+
+- **Platform**: DigitalOcean App Platform
+- **Backend**: ASP.NET Core API
+- **Frontend**: React (Vite)
+- **Databas**: MySQL (produktion) eller lokal MySQL (utveckling)
+- **SignalR**: In-process SignalR (eller konfigurerad SignalR-tjänst)
+
+### Miljökonfiguration för produktion
+
+Alla känsliga värden konfigureras via DigitalOcean App Platform Environment Variables:
+
+- `ConnectionStrings__DefaultConnection`
+- `Jwt__SecretKey`
+- `Jwt__Issuer`
+- `Jwt__Audience`
+- `OpenAI__ApiKey`
+- `Cors__AllowedOrigins`
+
+**Konfigurera i DigitalOcean:**
+
+1. Öppna DigitalOcean App Platform
+2. Navigera till din app
+3. Gå till **Settings** → **App-Level Environment Variables**
+4. Lägg till varje variabel med dubbel underscore (`__`) för nested config
+
+### Lokal utveckling
+
+För lokal utveckling kan du antingen:
+
+1. Använda miljövariabler i systemet
+2. Skapa `appsettings.Development.json` (kommer inte att committas till Git)
+3. Använda User Secrets: `dotnet user-secrets set "ConnectionStrings:DefaultConnection" "din-connection-string"`
+
+## Utvecklade funktioner
+
+Följande funktioner har utvecklats och integrerats i systemet:
+
+### Kärnfunktionalitet (från grupparbetet)
+
+- ✅ **Användarautentisering**: Registrering, inloggning, JWT-baserad autentisering
+- ✅ **Bokningssystem**: Skapa, visa, uppdatera och avbryta bokningar
+- ✅ **Resurshantering**: Hantera skrivbord, mötesrum, VR-utrustning och AI-servrar
+- ✅ **Rollbaserad åtkomst**: Separata behörigheter för medlemmar och administratörer
+- ✅ **Admin Dashboard**: Omfattande admin-panel för systemhantering
+
+### Vidareutvecklade funktioner
+
+#### Realtidskommunikation (SignalR)
+
+- ✅ **Realtidsuppdateringar**: Automatiska uppdateringar när bokningar skapas, ändras eller avbryts
+- ✅ **Live Status**: Se bokningsstatus i realtid utan siduppdatering
+- ✅ **Push Notifications**: Få notifieringar om bokningsändringar
+- ✅ **SignalR Integration**: Realtidskommunikation med in-process SignalR eller extern SignalR-tjänst
+
+#### AI-implementering
+
+- ✅ **AI Chat**: Intelligenta konversationer om bokningar med kontextuell förståelse
+- ✅ **Smart Booking Assistant**: AI-assistent som hjälper användare att välja rätt resurs
+- ✅ **AI Insights Dashboard**: Avancerad analys av bokningsmönster för administratörer
+- ✅ **Intelligent Resource Recommendations**: AI-förslag baserat på användarens historik och preferenser
+- ✅ **Context-Aware AI**: AI som förstår plattformens syfte och filtrerar irrelevanta frågor
+- ✅ **Dynamic Prompt Management**: Konfigurerbara AI-prompts utan omstart av applikationen
+- ✅ **Smart Response System**: AI svarar endast på bokningsrelaterade frågor med relevanta förslag
+- ✅ **Predictive Analytics**: AI-analys av bokningsmönster för bättre planering
+
+#### Ytterligare förbättringar
+
+- ✅ **Betalningssystem**: Integrering för betalningshantering
+- ✅ **IoT Dashboard**: Integration med IoT-enheter för realtidsövervakning
+- ✅ **Avancerad felhantering**: Robust error handling middleware
+- ✅ **Request Logging**: Logging middleware för debugging och monitoring
+- ✅ **API Dokumentation**: Scalar API-dokumentation integrerad
+
 ## Säkerhet och prestanda
 
 - **JWT Authentication**: Säker autentisering med token-baserad säkerhet
@@ -431,3 +615,4 @@ AI-systemet använder konfigurerbara prompts för att säkerställa relevanta sv
 - **Database Optimization**: Optimerad databasstruktur för snabba svar
 - **Error Handling**: Robust felhantering med detaljerade felmeddelanden
 - **AI Security**: Säker AI-integration med konfigurerbara säkerhetsinställningar
+- **Environment Variables**: Alla känsliga värden hanteras via miljövariabler
