@@ -6,13 +6,10 @@ services:
     git:
       repo_clone_url: https://github.com/khaled99xp/InnoviaHub.git
       branch: main
-    source_dir: backend
+    dockerfile_path: backend/Dockerfile
     http_port: 8080
-    environment_slug: dotnet
     instance_count: 1
     instance_size_slug: basic-xxs
-    run_command: dotnet out/backend.dll
-    build_command: dotnet publish -c Release -o out /p:OpenApiGenerateDocuments=false
     routes:
       - path: "/api"
     envs:
