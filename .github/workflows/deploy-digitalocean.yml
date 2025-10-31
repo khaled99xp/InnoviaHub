@@ -1,33 +1,51 @@
-name: Deploy to DigitalOcean App Platform
+name: Deploy Frontend to DigitalOcean App Platform
 
 on:
   push:
     branches: [ main ]
     paths:
-      - '.do/app.yaml'
-      - 'backend/**'
       - 'frontend/**'
+      - '.do/app.yaml'
       - '.github/workflows/deploy-digitalocean.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./frontend
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.x'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Build frontend
+        run: npm run build
+      
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_API_TOKEN }}
-
+      
       - name: Validate app spec
+        working-directory: ./
         run: |
           echo "=== App Spec Content ==="
           cat .do/app.yaml
           echo "=== Validation complete ==="
-
+      
       - name: Create or update app
+        working-directory: ./
         timeout-minutes: 20
         run: |
           APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')
@@ -40,5 +58,12 @@ jobs:
             doctl apps update $APP_ID --spec .do/app.yaml --wait
             echo "✓ App updated successfully!"
           fi
-
-
+      
+      - name: Get app URL
+        working-directory: ./
+        run: |
+          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')
+          if [ -n "$APP_ID" ]; then
+            echo "🚀 App deployed successfully!"
+            doctl apps get $APP_ID --format DefaultIngress
+          fi
