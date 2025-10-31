@@ -197,6 +197,23 @@ if (app.Environment.IsDevelopment())
 }
 
 
+// Apply EF Core migrations automatically on startup (Production-safe)
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await db.Database.MigrateAsync();
+    }
+    Console.WriteLine("[EF] Database migrations applied successfully.");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[EF] Migration error: {ex.Message}");
+    throw;
+}
+
+
 //Seed default roles and users
 if (!app.Environment.IsEnvironment("CI"))
 {
