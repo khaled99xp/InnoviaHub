@@ -3,13 +3,13 @@
 // API Configuration
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL 
   ? `${import.meta.env.VITE_API_BASE_URL}/api` 
-  : 'http://localhost:5296/api';
+  : 'https://innoviahub-eubxe3awe3gdaucu.swedencentral-01.azurewebsites.net/api';
 export const ADMIN_API_BASE_URL = API_BASE_URL;
 
 // SignalR Configuration
 export const SIGNALR_HUB_URL = import.meta.env.VITE_SIGNALR_HUB_URL 
   ? import.meta.env.VITE_SIGNALR_HUB_URL 
-  : 'http://localhost:5296/bookingHub';
+  : 'https://innoviahub-eubxe3awe3gdaucu.swedencentral-01.azurewebsites.net/api/bookingHub';
 
 // API Endpoints
 export const API_ENDPOINTS = {
