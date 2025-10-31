@@ -20,20 +20,21 @@ services:
         value: Production
         scope: RUN_TIME
       - key: DB_HOST
-        value: ${innoviahub-db.HOSTNAME}
+        value: ${DB_HOST}
         scope: RUN_TIME
       - key: DB_PORT
-        value: ${innoviahub-db.PORT}
+        value: ${DB_PORT}
         scope: RUN_TIME
       - key: DB_NAME
-        value: ${innoviahub-db.DATABASE}
+        value: ${DB_NAME}
         scope: RUN_TIME
       - key: DB_USER
-        value: ${innoviahub-db.USERNAME}
+        value: ${DB_USER}
         scope: RUN_TIME
       - key: DB_PASSWORD
-        value: ${innoviahub-db.PASSWORD}
+        value: ${DB_PASSWORD}
         scope: RUN_TIME
+        type: SECRET
       - key: DB_CONNECTION_STRING
         value: "Server=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASSWORD};SslMode=Required;"
         scope: RUN_TIME
@@ -73,10 +74,4 @@ services:
         value: production
         scope: RUN_AND_BUILD_TIME
 
-databases:
-  - name: innoviahub-db
-    engine: MYSQL
-    version: "8"
-    production: true
-    cluster_name: innoviahub-mysql-cluster
 
