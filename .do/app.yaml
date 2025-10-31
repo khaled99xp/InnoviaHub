@@ -64,7 +64,7 @@ static_sites:
       repo_clone_url: https://github.com/khaled99xp/InnoviaHub.git
       branch: main
     source_dir: frontend
-    build_command: npm install --legacy-peer-deps && npx vite build --mode production
+    build_command: npm install --legacy-peer-deps --no-audit --no-fund && npm run build:prod
     output_dir: dist
     routes:
       - path: "/"
