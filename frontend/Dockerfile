@@ -7,15 +7,44 @@ ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
 ENV NODE_ENV=production
 ENV CI=false
 
-# Install dependencies
-COPY frontend/package*.json ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+# Verify we're in the right directory and show structure
+RUN echo "Current directory: $(pwd)" && ls -la || true
 
-# Copy source code
+# Install dependencies first (better caching)
+COPY frontend/package*.json ./
+RUN npm ci --legacy-peer-deps --prefer-offline --no-audit || \
+    npm install --legacy-peer-deps --prefer-offline --no-audit
+
+# Copy all source files
 COPY frontend/ ./
 
-# Build the application with verbose output
-RUN npm run build 2>&1 || (echo "Build failed with exit code: $?" && exit 1)
+# Verify critical files exist
+RUN echo "Verifying files..." && \
+    test -f package.json && echo "✓ package.json exists" || (echo "✗ package.json missing" && exit 1) && \
+    test -f vite.config.ts && echo "✓ vite.config.ts exists" || (echo "✗ vite.config.ts missing" && exit 1) && \
+    test -d src && echo "✓ src directory exists" || (echo "✗ src directory missing" && exit 1)
+
+# Build the application
+RUN echo "=== Starting build ===" && \
+    npm run build; \
+    BUILD_EXIT_CODE=$?; \
+    echo "Build exit code: $BUILD_EXIT_CODE"; \
+    if [ $BUILD_EXIT_CODE -ne 0 ]; then \
+        echo "✗ Build failed with exit code $BUILD_EXIT_CODE"; \
+        exit $BUILD_EXIT_CODE; \
+    fi; \
+    echo "=== Build completed ===" && \
+    if [ ! -d "dist" ]; then \
+        echo "✗ ERROR: dist directory was not created"; \
+        exit 1; \
+    fi; \
+    if [ ! -f "dist/index.html" ]; then \
+        echo "✗ ERROR: dist/index.html is missing"; \
+        ls -la dist/ || true; \
+        exit 1; \
+    fi; \
+    echo "✓ Build successful! Artifacts:" && \
+    ls -lah dist/
 
 FROM nginx:alpine
 

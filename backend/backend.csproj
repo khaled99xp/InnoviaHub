@@ -7,9 +7,8 @@
   </PropertyGroup>
    
   <PropertyGroup>
-    <!-- Disable OpenAPI generation by default, only enable in Development -->
-    <OpenApiGenerateDocuments Condition="'$(Configuration)' == 'Release' OR '$(DOTNET_ENVIRONMENT)' == 'CI' OR '$(ASPNETCORE_ENVIRONMENT)' == 'CI'">false</OpenApiGenerateDocuments>
-    <OpenApiGenerateDocuments Condition="'$(Configuration)' != 'Release' AND '$(DOTNET_ENVIRONMENT)' != 'CI' AND '$(ASPNETCORE_ENVIRONMENT)' != 'CI'">true</OpenApiGenerateDocuments>
+    <!-- Disable OpenAPI generation during build, only generate at runtime -->
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
     <OpenApiDocumentsDirectory Condition="'$(OpenApiGenerateDocuments)' == 'true'">$(MSBuildProjectDirectory)</OpenApiDocumentsDirectory>
   </PropertyGroup>
 

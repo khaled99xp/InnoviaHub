@@ -22,26 +22,29 @@ builder.Services.AddOpenApi();
 builder.Configuration
     .AddEnvironmentVariables();
 
-// Debug: Log configuration values (only connection string info, not secrets)
+// Get configuration values (but don't validate until app is built - to allow OpenAPI generation during build)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
-var jwtSecretKeyLength = builder.Configuration["Jwt:SecretKey"]?.Length ?? 0;
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"];
 
-Console.WriteLine($"[Config] ConnectionString exists: {!string.IsNullOrEmpty(connectionString)}");
-Console.WriteLine($"[Config] ConnectionString starts with: {(connectionString?.Substring(0, Math.Min(20, connectionString?.Length ?? 0)) ?? "NULL")}");
+// Only log if we have values (don't throw during build time)
+if (!string.IsNullOrEmpty(connectionString))
+{
+    var connectionStringForLog = connectionString.Length > 20 
+        ? connectionString.Substring(0, 20) + "..." 
+        : connectionString;
+    Console.WriteLine($"[Config] ConnectionString exists: true");
+    Console.WriteLine($"[Config] ConnectionString starts with: {connectionStringForLog}");
+}
+else
+{
+    Console.WriteLine($"[Config] ConnectionString: NOT CONFIGURED (will be validated at runtime)");
+}
+
 Console.WriteLine($"[Config] JWT Issuer: {jwtIssuer ?? "NULL"}");
-Console.WriteLine($"[Config] JWT SecretKey length: {jwtSecretKeyLength}");
+Console.WriteLine($"[Config] JWT SecretKey length: {jwtSecretKey?.Length ?? 0}");
 
-// Validate required configuration
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("ConnectionString 'DefaultConnection' is not configured. Please set ConnectionStrings__DefaultConnection in Azure App Service.");
-}
-
-if (string.IsNullOrEmpty(builder.Configuration["Jwt:SecretKey"]))
-{
-    throw new InvalidOperationException("JWT SecretKey is not configured. Please set Jwt__SecretKey in Azure App Service.");
-}
+// Note: Configuration validation moved to after app.Build() to allow OpenAPI document generation during build
 
 // Add services to the container.
 builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
@@ -66,44 +69,56 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 
 // Add Entity Framework
-// For Azure MySQL Flexible Server, ensure connection string format is correct
-// Log connection string info (hide password)
-var connectionStringForLog = connectionString;
-if (connectionString.Contains("Password="))
+// Only configure if connection string is available (skip during OpenAPI generation)
+if (!string.IsNullOrEmpty(connectionString))
 {
-    var passwordIndex = connectionString.IndexOf("Password=", StringComparison.OrdinalIgnoreCase);
-    if (passwordIndex >= 0)
+    // Log connection string info (hide password)
+    var connectionStringForLog = connectionString;
+    if (connectionString.Contains("Password="))
     {
-        var afterPassword = connectionString.IndexOf(";", passwordIndex);
-        if (afterPassword > passwordIndex)
+        var passwordIndex = connectionString.IndexOf("Password=", StringComparison.OrdinalIgnoreCase);
+        if (passwordIndex >= 0)
         {
-            connectionStringForLog = connectionString.Substring(0, passwordIndex + 9) + "***" + 
-                                    (afterPassword < connectionString.Length ? connectionString.Substring(afterPassword) : "");
+            var afterPassword = connectionString.IndexOf(";", passwordIndex);
+            if (afterPassword > passwordIndex)
+            {
+                connectionStringForLog = connectionString.Substring(0, passwordIndex + 9) + "***" + 
+                                        (afterPassword < connectionString.Length ? connectionString.Substring(afterPassword) : "");
+            }
         }
     }
-}
-Console.WriteLine($"[EF] Connection String: {connectionStringForLog}");
+    Console.WriteLine($"[EF] Connection String: {connectionStringForLog}");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    {
+        try
+        {
+            options.UseMySql(connectionString, 
+                new MySqlServerVersion(new Version(8, 0, 33)),
+                mysqlOptions =>
+                {
+                    mysqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorNumbersToAdd: null);
+                });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[EF] Error configuring MySQL: {ex.Message}");
+            throw;
+        }
+    });
+}
+else
 {
-    try
+    // Add a dummy DbContext configuration for OpenAPI generation (won't be used at runtime)
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
     {
-        options.UseMySql(connectionString, 
-            new MySqlServerVersion(new Version(8, 0, 33)),
-            mysqlOptions =>
-            {
-                mysqlOptions.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(5),
-                    errorNumbersToAdd: null);
-            });
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[EF] Error configuring MySQL: {ex.Message}");
-        throw;
-    }
-});
+        // This will be validated and configured properly after app.Build()
+    });
+    Console.WriteLine($"[EF] Connection String not available (likely during build) - will be validated at runtime");
+}
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
@@ -189,13 +204,32 @@ builder.Services.AddScoped<IJwtTokenManager, JwtTokenManager>();
 
 var app = builder.Build();
 
+// Validate required configuration NOW (after app is built, but before running migrations)
+var runtimeConnectionString = app.Configuration.GetConnectionString("DefaultConnection");
+var runtimeJwtSecret = app.Configuration["Jwt:SecretKey"];
+
+if (string.IsNullOrEmpty(runtimeConnectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionString 'DefaultConnection' is not configured. " +
+        "Please set ConnectionStrings__DefaultConnection in appsettings.Development.json for local development, " +
+        "or as an environment variable in production.");
+}
+
+if (string.IsNullOrEmpty(runtimeJwtSecret))
+{
+    throw new InvalidOperationException(
+        "JWT SecretKey is not configured. " +
+        "Please set Jwt__SecretKey in appsettings.Development.json for local development, " +
+        "or as an environment variable in production.");
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
-
 
 // Apply EF Core migrations automatically on startup (Production-safe)
 try

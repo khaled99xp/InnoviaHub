@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation
+*.md
+README*
+LICENSE
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Dependencies (will be installed in container)
+**/node_modules
+**/bin
+**/obj
+**/dist
+
+# Build artifacts
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+**/*.test.*
+**/*.spec.*
+**/test/
+**/tests/
+backend.Tests
+
+# Other projects (if in monorepo)
+innovia-iot
+
