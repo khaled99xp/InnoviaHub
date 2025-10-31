@@ -2,39 +2,37 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Set npm config
+ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
+
+# Copy and install dependencies
 COPY frontend/package*.json ./
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
-# Create .npmrc with legacy peer deps config
-RUN echo "legacy-peer-deps=true" > .npmrc && \
-    echo "audit=false" >> .npmrc && \
-    echo "fund=false" >> .npmrc
-
-# Install dependencies
-RUN npm install
-
-# Copy all frontend files
+# Copy source code
 COPY frontend/ ./
 
-# Build using vite directly (skips TypeScript check)
-RUN npx vite build
+# Build
+ENV NODE_ENV=production
+RUN npm run build || npx vite build
 
 FROM nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configure nginx for SPA routing
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Nginx config for SPA
+RUN cat > /etc/nginx/conf.d/default.conf << 'EOF'
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
 
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
 
