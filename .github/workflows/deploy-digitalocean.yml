@@ -27,6 +27,21 @@ jobs:
           cat .do/app.yaml
           echo "=== Validation complete ==="
 
+      - name: Create MySQL cluster if not exists
+        run: |
+          if doctl databases cluster list --format Name --no-header | grep -q "innoviahub-mysql-cluster"; then
+            echo "MySQL cluster already exists"
+          else
+            echo "Creating MySQL cluster..."
+            doctl databases cluster create innoviahub-mysql-cluster \
+              --engine mysql \
+              --version "8" \
+              --region nyc1 \
+              --size db-s-1vcpu-1gb \
+              --num-nodes 1 \
+              --wait
+          fi
+
       - name: Create or update app
         run: |
           APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')
