@@ -4,17 +4,30 @@ WORKDIR /app
 
 # Set npm config
 ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
+ENV NODE_ENV=production
+ENV CI=false
 
-# Copy and install dependencies
+# Install dependencies with verbose output
 COPY frontend/package*.json ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+RUN npm ci --legacy-peer-deps --verbose || \
+    (echo "npm ci failed, trying npm install..." && \
+     npm install --legacy-peer-deps --verbose)
 
 # Copy source code
 COPY frontend/ ./
 
-# Build
-ENV NODE_ENV=production
-RUN npm run build || npx vite build
+# Verify files are present
+RUN ls -la && \
+    echo "Package.json content:" && \
+    cat package.json | head -20
+
+# Build with detailed error output
+RUN echo "=== Starting build process ===" && \
+    npm run build || \
+    (echo "✗ npm run build failed, attempting direct vite build..." && \
+     npx vite build) && \
+    echo "✓ Build completed!" && \
+    ls -la dist/
 
 FROM nginx:alpine
 
