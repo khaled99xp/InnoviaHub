@@ -27,17 +27,6 @@ jobs:
           cat .do/app.yaml
           echo "=== Validation complete ==="
 
-      - name: Verify MySQL cluster exists
-        run: |
-          echo "Checking for MySQL cluster: innoviahub-mysql-cluster"
-          if doctl databases cluster list -o json | grep -q "innoviahub-mysql-cluster"; then
-            echo "✓ MySQL cluster found and ready!"
-          else
-            echo "⚠ MySQL cluster 'innoviahub-mysql-cluster' not found!"
-            echo "Please create it manually from DigitalOcean UI first."
-            exit 1
-          fi
-
       - name: Create or update app
         run: |
           APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')
