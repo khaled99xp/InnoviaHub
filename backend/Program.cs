@@ -66,9 +66,44 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 
 // Add Entity Framework
+// For Azure MySQL Flexible Server, ensure connection string format is correct
+// Log connection string info (hide password)
+var connectionStringForLog = connectionString;
+if (connectionString.Contains("Password="))
+{
+    var passwordIndex = connectionString.IndexOf("Password=", StringComparison.OrdinalIgnoreCase);
+    if (passwordIndex >= 0)
+    {
+        var afterPassword = connectionString.IndexOf(";", passwordIndex);
+        if (afterPassword > passwordIndex)
+        {
+            connectionStringForLog = connectionString.Substring(0, passwordIndex + 9) + "***" + 
+                                    (afterPassword < connectionString.Length ? connectionString.Substring(afterPassword) : "");
+        }
+    }
+}
+Console.WriteLine($"[EF] Connection String: {connectionStringForLog}");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"),
-    new MySqlServerVersion(new Version(8, 0, 33))));
+{
+    try
+    {
+        options.UseMySql(connectionString, 
+            new MySqlServerVersion(new Version(8, 0, 33)),
+            mysqlOptions =>
+            {
+                mysqlOptions.EnableRetryOnFailure(
+                    maxRetryCount: 3,
+                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    errorNumbersToAdd: null);
+            });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[EF] Error configuring MySQL: {ex.Message}");
+        throw;
+    }
+});
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
