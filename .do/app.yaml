@@ -78,5 +78,6 @@ databases:
     engine: MYSQL
     version: "8"
     production: true
+    cluster_name: innoviahub-db-cluster
 
 
