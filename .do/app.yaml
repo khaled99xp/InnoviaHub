@@ -64,7 +64,7 @@ static_sites:
       repo_clone_url: https://github.com/khaled99xp/InnoviaHub.git
       branch: main
     source_dir: frontend
-    build_command: npm install && npm run build:prod
+    build_command: npm install && npx vite build
     output_dir: dist
     routes:
       - path: "/"

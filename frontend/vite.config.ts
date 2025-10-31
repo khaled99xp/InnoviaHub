@@ -11,4 +11,15 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  build: {
+    minify: 'esbuild',
+    sourcemap: false,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Skip TypeScript warnings in production builds
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
+        warn(warning);
+      },
+    },
+  },
 });
