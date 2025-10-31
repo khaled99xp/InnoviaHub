@@ -25,15 +25,8 @@ jobs:
         run: |
           APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | awk '$2=="innoviahub" {print $1}')
           if [ -z "$APP_ID" ]; then
-            echo "App not found; attempting to create via CLI..."
-            set -e
-            # Try to create app with repo context so services using source_dir are valid
-            if doctl apps create --spec .do/app.yaml --repo khaled99xp/InnoviaHub --branch main --wait; then
-              echo "App created successfully."
-            else
-              echo "First attempt failed; retrying create without repo flag..."
-              doctl apps create --spec .do/app.yaml --wait
-            fi
+            echo "Creating new app..."
+            doctl apps create --spec .do/app.yaml --wait
           else
             echo "Updating app $APP_ID..."
             doctl apps update $APP_ID --spec .do/app.yaml --wait
