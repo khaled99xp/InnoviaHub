@@ -53,88 +53,77 @@ namespace backend.Services
             return await _repository.GetResourceBookingsAsync(resourceId, includeExpiredBookings);
         }
 
-        //Creates a new booking 
-        public async Task<Booking> CreateAsync(string userId, BookingDTO dto)
+   public async Task<Booking> CreateAsync(string userId, BookingDTO dto)
+{
+    var resource = await _resourceService.GetByIdAsync(dto.ResourceId);
+    if (resource == null) throw new Exception("Resource doesnt exist");
+
+    if (dto.Timeslot != "FM" && dto.Timeslot != "EF") throw new Exception("No timeslot specified");
+
+    //Checks the date
+    if (!DateTime.TryParse(dto.BookingDate, out var localDate))
+        throw new Exception("Invalid date format");
+
+    //Start and end times based on FM/EF
+    var startLocal = dto.Timeslot == "FM" ? localDate.Date.AddHours(8) : localDate.Date.AddHours(12);
+    var endLocal   = dto.Timeslot == "FM" ? localDate.Date.AddHours(12) : localDate.Date.AddHours(16);
+
+    //Convert to UTC time
+    var startUtc = startLocal.ToUniversalTime();
+    var endUtc   = endLocal.ToUniversalTime();
+
+    // Retry mechanism for concurrent bookings
+    const int maxRetries = 3;
+    for (int attempt = 0; attempt < maxRetries; attempt++)
+    {
+        try
         {
-            var resource = await _resourceService.GetByIdAsync(dto.ResourceId);
-            if (resource == null) throw new Exception("Resource doesnt exist");
-
-            if (dto.Timeslot != "FM" && dto.Timeslot != "EF") throw new Exception("No timeslot specified");
-
-            //Checks the date
-            if (!DateTime.TryParse(dto.BookingDate, out var localDate))
-                throw new Exception("Invalid date format");
-
-            //Start and end times based on FM/EF
-            var startLocal = dto.Timeslot == "FM" ? localDate.Date.AddHours(8) : localDate.Date.AddHours(12);
-            var endLocal   = dto.Timeslot == "FM" ? localDate.Date.AddHours(12) : localDate.Date.AddHours(16);
-
-            //Convert to UTC time
-            var startUtc = startLocal.ToUniversalTime();
-            var endUtc   = endLocal.ToUniversalTime();
-
-            // Retry mechanism for concurrent bookings
-            const int maxRetries = 3;
-            for (int attempt = 0; attempt < maxRetries; attempt++)
-            {
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
-                {
-                    //Check if timeslot already booked (with lock)
-                    var conflict = await _context.Bookings
-                        .Where(b => b.ResourceId == dto.ResourceId && b.IsActive)
-                        .AnyAsync(b => 
-                            (b.BookingDate <= startUtc && b.EndDate > startUtc) ||
-                            (b.BookingDate < endUtc && b.EndDate >= endUtc) ||
-                            (b.BookingDate >= startUtc && b.EndDate <= endUtc)
-                        );
-                    
-                    if (conflict) 
-                    {
-                        await transaction.RollbackAsync();
-                        if (attempt == maxRetries - 1)
-                            throw new Exception("Timeslot already booked");
-                        
-                        // Wait a bit before retry
-                        await Task.Delay(100 * (attempt + 1));
-                        continue;
-                    }
-
-                    //Save booking
-                    var booking = new Booking
-                    {
-                        IsActive = true,
-                        BookingDate = startUtc,
-                        EndDate = endUtc,
-                        UserId = userId,
-                        ResourceId = dto.ResourceId,
-                        Timeslot = dto.Timeslot
-                    };
-
-                    var created = await _repository.CreateAsync(booking);
-                    await transaction.CommitAsync();
-                    
-                    await _hubContext.Clients.All.SendAsync("BookingCreated", created);
-                    return created;
-                }
-                catch (Exception ex) when (ex.Message.Contains("duplicate") || ex.Message.Contains("unique"))
-                {
-                    await transaction.RollbackAsync();
-                    if (attempt == maxRetries - 1)
-                        throw new Exception("Timeslot already booked");
-                    
-                    await Task.Delay(100 * (attempt + 1));
-                }
-                catch
-                {
-                    await transaction.RollbackAsync();
-                    throw;
-                }
-            }
+            //Check if timeslot already booked
+            var conflict = await _context.Bookings
+                .Where(b => b.ResourceId == dto.ResourceId && b.IsActive)
+                .AnyAsync(b => 
+                    (b.BookingDate <= startUtc && b.EndDate > startUtc) ||
+                    (b.BookingDate < endUtc && b.EndDate >= endUtc) ||
+                    (b.BookingDate >= startUtc && b.EndDate <= endUtc)
+                );
             
-            throw new Exception("Failed to create booking after multiple attempts");
-        }
+            if (conflict) 
+            {
+                throw new Exception("Timeslot already booked");
+            }
 
+            //Save booking (automatically wrapped in transaction by EF Core)
+            var booking = new Booking
+            {
+                IsActive = true,
+                BookingDate = startUtc,
+                EndDate = endUtc,
+                UserId = userId,
+                ResourceId = dto.ResourceId,
+                Timeslot = dto.Timeslot
+            };
+
+            var created = await _repository.CreateAsync(booking);
+            
+            // SignalR notification
+            await _hubContext.Clients.All.SendAsync("BookingCreated", created);
+            
+            return created;
+        }
+        catch (Exception ex) when (ex.Message.Contains("duplicate") || 
+                                    ex.Message.Contains("unique") ||
+                                    ex.Message.Contains("already booked"))
+        {
+            if (attempt == maxRetries - 1)
+                throw new Exception("Timeslot already booked");
+            
+            // Wait before retry
+            await Task.Delay(100 * (attempt + 1));
+        }
+    }
+    
+    throw new Exception("Failed to create booking after multiple attempts");
+}
         //Update booking
         public async Task<Booking?> UpdateAsync(Booking booking)
         {
