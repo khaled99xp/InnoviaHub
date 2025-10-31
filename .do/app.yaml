@@ -77,7 +77,6 @@ databases:
   - name: innoviahub-db
     engine: MYSQL
     production: true
-    cluster_name: innoviahub-db
     version: "8"
     db_name: InnoviaHubDB
     db_user: app_user
