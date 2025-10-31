@@ -27,40 +27,16 @@ jobs:
           cat .do/app.yaml
           echo "=== Validation complete ==="
 
-      - name: Setup MySQL database
+      - name: Verify MySQL cluster exists
         run: |
-          if doctl databases cluster list --format Name --no-header | grep -q "innoviahub-mysql-cluster"; then
-            echo "MySQL cluster already exists"
-            CLUSTER_ID=$(doctl databases cluster list --format ID,Name --no-header | awk '$2=="innoviahub-mysql-cluster" {print $1}')
-            echo "Using existing cluster: $CLUSTER_ID"
+          echo "Checking for MySQL cluster: innoviahub-mysql-cluster"
+          if doctl databases cluster list -o json | grep -q "innoviahub-mysql-cluster"; then
+            echo "✓ MySQL cluster found and ready!"
           else
-            echo "Creating MySQL cluster (this may take 5-10 minutes)..."
-            doctl databases cluster create innoviahub-mysql-cluster \
-              --engine mysql \
-              --version "8" \
-              --region nyc1 \
-              --size db-s-1vcpu-1gb \
-              --num-nodes 1 \
-              --wait
-            CLUSTER_ID=$(doctl databases cluster list --format ID,Name --no-header | awk '$2=="innoviahub-mysql-cluster" {print $1}')
-            echo "Cluster created: $CLUSTER_ID"
+            echo "⚠ MySQL cluster 'innoviahub-mysql-cluster' not found!"
+            echo "Please create it manually from DigitalOcean UI first."
+            exit 1
           fi
-          
-          # Wait for cluster to be fully online
-          echo "Checking cluster status..."
-          for i in {1..30}; do
-            STATUS=$(doctl databases cluster get $CLUSTER_ID --format Status --no-header 2>/dev/null || echo "creating")
-            echo "Attempt $i: Cluster status is '$STATUS'"
-            if [ "$STATUS" = "online" ]; then
-              echo "✓ Cluster is online and ready!"
-              break
-            fi
-            if [ $i -eq 30 ]; then
-              echo "⚠ Cluster not fully online yet, but proceeding anyway"
-            fi
-            sleep 10
-          done
-          echo "CLUSTER_ID=$CLUSTER_ID" >> $GITHUB_ENV
 
       - name: Create or update app
         run: |
