@@ -1,62 +1,61 @@
 spec:
   name: innoviahub
   services:
-    - name: backend
-      http_port: 8080
-      source_dir: backend
-      environment_slug: dotnet
-      instance_count: 1
-      instance_size_slug: basic-xxs
-      run_command: "dotnet out/backend.dll"
-      build_command: "dotnet publish -c Release -o out /p:OpenApiGenerateDocuments=false"
-      routes:
-        - path: "/api"
-      envs:
-        - key: ASPNETCORE_URLS
-          value: http://0.0.0.0:8080
-          scope: RUN_AND_BUILD_TIME
-        - key: ASPNETCORE_ENVIRONMENT
-          value: Production
-          scope: RUN_TIME
-        - key: DB_HOST
-          value: ${innoviahub-db.HOSTNAME}
-          scope: RUN_TIME
-        - key: DB_PORT
-          value: ${innoviahub-db.PORT}
-          scope: RUN_TIME
-        - key: DB_NAME
-          value: ${innoviahub-db.DATABASE}
-          scope: RUN_TIME
-        - key: DB_USER
-          value: ${innoviahub-db.USERNAME}
-          scope: RUN_TIME
-        - key: DB_PASSWORD
-          value: ${innoviahub-db.PASSWORD}
-          scope: RUN_TIME
-        - key: DB_CONNECTION_STRING
-          value: "Server=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASSWORD};SslMode=Required;"
-          scope: RUN_TIME
-        - key: ConnectionStrings__DefaultConnection
-          value: ${DB_CONNECTION_STRING}
-          scope: RUN_TIME
-        - key: Jwt__Issuer
-          value: ${JWT_ISSUER}
-          scope: RUN_TIME
-        - key: Jwt__Audience
-          value: ${JWT_AUDIENCE}
-          scope: RUN_TIME
-        - key: Jwt__SecretKey
-          value: ${JWT_SECRET}
-          scope: RUN_TIME
-          type: SECRET
-        - key: OpenAI__ApiKey
-          value: ${OPENAI_API_KEY}
-          scope: RUN_TIME
-          type: SECRET
-        - key: Cors__AllowedOrigins
-          value: ${FRONTEND_ORIGIN}
-          scope: RUN_TIME
-
+  - name: backend
+    http_port: 8080
+    source_dir: backend
+    environment_slug: dotnet
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    run_command: "dotnet out/backend.dll"
+    build_command: "dotnet publish -c Release -o out /p:OpenApiGenerateDocuments=false"
+    routes:
+      - path: "/api"
+    envs:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:8080
+        scope: RUN_AND_BUILD_TIME
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+        scope: RUN_TIME
+      - key: DB_HOST
+        value: ${innoviahub-db.HOSTNAME}
+        scope: RUN_TIME
+      - key: DB_PORT
+        value: ${innoviahub-db.PORT}
+        scope: RUN_TIME
+      - key: DB_NAME
+        value: ${innoviahub-db.DATABASE}
+        scope: RUN_TIME
+      - key: DB_USER
+        value: ${innoviahub-db.USERNAME}
+        scope: RUN_TIME
+      - key: DB_PASSWORD
+        value: ${innoviahub-db.PASSWORD}
+        scope: RUN_TIME
+      - key: DB_CONNECTION_STRING
+        value: "Server=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};Uid=${DB_USER};Pwd=${DB_PASSWORD};SslMode=Required;"
+        scope: RUN_TIME
+      - key: ConnectionStrings__DefaultConnection
+        value: ${DB_CONNECTION_STRING}
+        scope: RUN_TIME
+      - key: Jwt__Issuer
+        value: ${JWT_ISSUER}
+        scope: RUN_TIME
+      - key: Jwt__Audience
+        value: ${JWT_AUDIENCE}
+        scope: RUN_TIME
+      - key: Jwt__SecretKey
+        value: ${JWT_SECRET}
+        scope: RUN_TIME
+        type: SECRET
+      - key: OpenAI__ApiKey
+        value: ${OPENAI_API_KEY}
+        scope: RUN_TIME
+        type: SECRET
+      - key: Cors__AllowedOrigins
+        value: ${FRONTEND_ORIGIN}
+        scope: RUN_TIME
 
   static_sites:
     - name: frontend
